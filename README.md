@@ -1,7 +1,10 @@
 # Territory Builder
 
-Drag-and-drop field force planner on the IMS 70 / 148 brick map.
-Assign bricks to medical reps, reps to district managers, and district managers to regional managers, and see geo share and balance at every level.
+Drag-and-drop field force planner on the IMS 70 / 148 brick map, by Khaled Tolba.
 
-- `index.html` — the planner (single page, no build step)
-- `tb-data.js` — IMS bricks: region, 70-brick group, geo share %, areas
+- Assign bricks, or single areas inside a brick, to medical reps; reps to district managers; district managers to regional managers.
+- Split a 148 brick into its areas with parts that must add up to 100% of the brick's geo share.
+- Download the IMS brick sheet (70 + 148 + areas), edit the geo share and upload it back (applies only to your own board).
+- Export the structure as a formatted Excel report, save it as a file, or share it with a link.
+
+Files: `index.html` (the app), `tb-data.js` (IMS bricks data), `logo.png`, `vendor/` (ExcelJS, lz-string).

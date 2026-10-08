@@ -4,49 +4,52 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Territory Builder</title>
-<meta name="description" content="Drag-and-drop field force planner on IMS bricks: assign bricks to reps, reps to district managers, district managers to regional managers, and balance geo share.">
+<meta name="description" content="Drag-and-drop field force planner on IMS bricks: assign bricks and areas to medical reps, reps to district managers, district managers to regional managers, and balance geo share.">
+<link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500&display=swap">
 <style>
-html,body{margin:0}
-
-/* Layout: a planning board. Brick pool on the left, the org tree (Regional → District → Rep) on the right, a live summary strip on top. */
+/* Layout: a planning board. Brick pool on the left, the org tree (Regional → District → Rep) on the right, live summary strip on top, logo footer. */
 :root{
   --bg:#eef1ef; --panel:#ffffff; --sunk:#e3e8e5; --line:#cfd8d3; --ink:#14251f; --muted:#5b6b64;
   --accent:#0f6b5c; --accent-soft:#d6ebe5; --chip:#f6f8f7;
   --rm:#6a4c93; --dm:#1d6fa5; --mr:#0f6b5c;
   --good:#2f7d4a; --good-bg:#dcefe2; --warn:#a46a00; --warn-bg:#f8ecd0; --bad:#b23a3a; --bad-bg:#f6dcdc;
-  --sel:#ffd66b;
+  --sel:#ffd66b; --area:#8a5a12; --area-bg:#f6ecd9;
   --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --f-ar:"IBM Plex Sans Arabic",Tahoma,sans-serif;
+  color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1714; --panel:#16211d; --sunk:#1c2925; --line:#2c3b36; --ink:#e3ece8; --muted:#93a59e;
   --accent:#4fc2a8; --accent-soft:#1d3a33; --chip:#1b2723;
   --rm:#b597e0; --dm:#6fb4e6; --mr:#4fc2a8;
   --good:#6ccf8c; --good-bg:#1c3426; --warn:#e6b24f; --warn-bg:#3a2f17; --bad:#f08080; --bad-bg:#3d1f1f;
-  --sel:#8a6d1f; color-scheme:dark}}
+  --sel:#8a6d1f; --area:#e8b768; --area-bg:#33281a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1714; --panel:#16211d; --sunk:#1c2925; --line:#2c3b36; --ink:#e3ece8; --muted:#93a59e;
   --accent:#4fc2a8; --accent-soft:#1d3a33; --chip:#1b2723;
   --rm:#b597e0; --dm:#6fb4e6; --mr:#4fc2a8;
   --good:#6ccf8c; --good-bg:#1c3426; --warn:#e6b24f; --warn-bg:#3a2f17; --bad:#f08080; --bad-bg:#3d1f1f;
-  --sel:#8a6d1f; color-scheme:dark}
+  --sel:#8a6d1f; --area:#e8b768; --area-bg:#33281a; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.4}
-.wrap{padding-inline:16px;padding-block:14px 80px;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.wrap{padding-inline:16px;padding-block:14px 24px;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
 button:hover{border-color:var(--accent)}
-button:focus-visible,input:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
 button.ghost{background:transparent;border-color:transparent;padding:4px 6px;color:var(--muted)}
 button.ghost:hover{color:var(--ink);border-color:var(--line)}
 button.danger{color:var(--bad)}
+button.link{border:0;background:transparent;color:var(--accent);padding:0;font-weight:600;text-decoration:underline;text-underline-offset:2px}
 .dot{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
 .dot.rm{background:var(--rm)}.dot.dm{background:var(--dm)}.dot.mr{background:var(--mr)}
 
@@ -58,6 +61,8 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;letter-s
 .seg button{border:0;border-radius:0;padding:6px 12px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
 .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.banner{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 14px;border-radius:8px;border:1px solid var(--warn);background:var(--warn-bg);font-size:13px}
+.banner b{font-weight:600}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .stat{background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -67,13 +72,17 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;letter-s
 .stat .bar i{display:block;height:100%;background:var(--accent)}
 .stat input{width:80px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)}
 
-.main{display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px;align-items:start}
+.main{display:grid;grid-template-columns:330px minmax(0,1fr);gap:12px;align-items:start}
 @media (max-width:860px){.main{grid-template-columns:1fr}}
 
 .pool{background:var(--panel);border:1px solid var(--line);border-radius:10px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);max-height:calc(100vh - 24px);display:flex;flex-direction:column;min-width:0}
 @media (max-width:860px){.pool{position:static;max-height:60vh}}
 .pool-head{padding:12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
-.pool-head h2{font-family:var(--f-display);font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:baseline}
+.pool-level{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.pool-level .lbl{flex-basis:100%}
+.pool-level .seg{flex:1 1 170px}
+.pool-level .seg button{flex:1;justify-content:center;white-space:nowrap}
+.pool-head h2{font-family:var(--f-display);font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .pool-head input[type=search],.pool-head select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
 .pool-body{overflow:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:10px;min-height:120px}
 .pool.drop-ok{outline:2px dashed var(--accent);outline-offset:-4px}
@@ -85,18 +94,31 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;letter-s
 .chip .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chip .s{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .chip .p{font-size:10px;color:var(--warn);font-weight:600}
+.chip .ar-tag{font-family:var(--f-ar);color:var(--area);font-size:12px}
+.chip.is-area{background:var(--area-bg);border-color:color-mix(in srgb,var(--area) 40%,var(--line))}
 .chip.sel{background:var(--sel);border-color:var(--warn)}
 .chip.sel .s{color:var(--ink)}
 .chip.dragging{opacity:.4}
+.chip.wide{display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%;padding:6px 8px}
+.chip.wide .top{display:flex;gap:6px;align-items:center}
+.chip.wide .top .n{flex:1}
+.ar-list{font-family:var(--f-ar);direction:rtl;text-align:right;font-size:12px;color:var(--muted);line-height:1.6;white-space:normal}
+.ar-list b{font-family:var(--f-body);direction:ltr;unicode-bidi:isolate;color:var(--ink);font-weight:600;font-size:11px}
 .empty{color:var(--muted);font-size:12px;font-style:italic;padding:6px 0}
+.switch{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 10px;cursor:pointer;user-select:none;white-space:nowrap}
+.switch input{accent-color:var(--accent);margin:0}
 
+.right{display:flex;flex-direction:column;gap:10px;min-width:0}
+.addbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:5}
+@media (max-width:860px){.addbar{position:static}}
+.addbar .lbl{margin-right:4px}
 .board{display:flex;flex-direction:column;gap:12px;min-width:0}
 .rm{border:1px solid var(--line);border-radius:10px;background:var(--panel);border-top:4px solid var(--rm);min-width:0}
 .rm.loose{border-top-color:var(--line);background:transparent;border-style:dashed}
-.blk-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px}
+.blk-head{display:flex;flex-wrap:nowrap;gap:8px 12px;align-items:center;padding:10px 12px}
+.rm>.blk-head{flex-wrap:wrap}
 .blk-head .name{font-family:var(--f-display);font-weight:700;font-size:17px;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1 1 80px;min-width:0;width:0;text-overflow:ellipsis}
 .rm>.blk-head .name{flex:0 1 260px}
-.blk-head{flex-wrap:nowrap}.rm>.blk-head{flex-wrap:wrap}
 .blk-head .name:hover{border-color:var(--line)}
 .blk-head .name:focus{border-color:var(--accent);background:var(--bg)}
 .role{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;color:var(--panel)}
@@ -127,43 +149,44 @@ body.has-sel .place{display:inline-flex}
 .pill.warn{background:var(--warn-bg);color:var(--warn)}
 .pill.bad{background:var(--bad-bg);color:var(--bad)}
 .pill.none{background:var(--sunk);color:var(--muted)}
+.pill.area{background:var(--area-bg);color:var(--area)}
 .share{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
 .mr .share{font-size:16px}
 
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
-.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:8px 12px;color:var(--muted);font-weight:600}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:8px 12px;color:var(--muted);font-weight:600;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 
-.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.tbl-wrap{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;max-height:70vh}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--sunk);position:sticky;top:0}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);background:var(--sunk);position:sticky;top:0;z-index:1}
 td.r,th.r{text-align:right}
+td.ar{font-family:var(--f-ar);direction:rtl;text-align:right;white-space:normal;min-width:320px;color:var(--muted);line-height:1.6}
+td.ar b{font-family:var(--f-body);color:var(--ink);font-size:12px}
 .hbar{width:160px;height:8px;background:var(--sunk);border-radius:4px;position:relative;overflow:visible}
 .hbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent)}
 .hbar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 tr.grp-dm td{background:var(--bg);font-weight:600}
 tr.grp-rm td{background:var(--sunk);font-weight:700}
+.chg{color:var(--warn);font-weight:600}
+.data-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.data-head input[type=search]{padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);min-width:220px}
 
 .selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 10px 8px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:20;max-width:calc(100% - 32px);flex-wrap:wrap}
 .selbar button{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent)}
-.toast{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);padding:10px 14px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.15);z-index:30;max-width:340px}
-.chip.wide{display:flex;flex-direction:column;align-items:stretch;gap:3px;width:100%;padding:6px 8px}
-.chip.wide .top{display:flex;gap:6px;align-items:center}
-.chip.wide .top .n{flex:1}
-.ar-list{font-family:var(--f-ar);direction:rtl;text-align:right;font-size:12px;color:var(--muted);line-height:1.6;white-space:normal}
-.ar-list b{font-family:var(--f-body);direction:ltr;unicode-bidi:isolate;color:var(--ink);font-weight:600;font-size:11px}
-.switch{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 10px;cursor:pointer;user-select:none}
-.switch input{accent-color:var(--accent);margin:0}
+.toast{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);padding:10px 14px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.15);z-index:60;max-width:360px}
 @keyframes flash{0%{box-shadow:0 0 0 0 var(--accent)}30%{box-shadow:0 0 0 5px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
 .new{animation:flash 1.1s ease-out 2;border-color:var(--accent)!important}
 .new .blk-head .name{background:var(--accent-soft)}
-.menu{position:fixed;z-index:45;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.22);width:min(340px,calc(100vw - 16px));max-height:min(520px,calc(100vh - 16px));display:flex;flex-direction:column;overflow:hidden}
+
+.menu{position:fixed;z-index:45;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.22);width:min(360px,calc(100vw - 16px));max-height:min(560px,calc(100vh - 16px));display:flex;flex-direction:column;overflow:hidden}
 .menu .mh{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
 .menu .mh b{font-family:var(--f-display);font-size:16px}
 .menu .mb{overflow:auto;padding:8px 12px;display:flex;flex-direction:column;gap:8px}
-.menu .areas{background:var(--bg);border-radius:6px;padding:6px 8px}
-.menu .areas .ar-list{font-size:12.5px}
+.menu .brick{background:var(--bg);border-radius:6px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.menu .brick .top{display:flex;align-items:center;gap:8px;font-size:12px}
+.menu .brick .top b{font-family:var(--f-body);font-size:12px}
 .menu .reps{display:flex;flex-direction:column;gap:2px}
 .menu .rep{justify-content:space-between;border:1px solid transparent;background:transparent;text-align:left;width:100%;padding:6px 8px}
 .menu .rep:hover{background:var(--accent-soft);border-color:var(--accent)}
@@ -171,15 +194,44 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .menu .rep small{color:var(--muted)}
 .menu .mf{padding:8px 12px;border-top:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
 .menu input[type=search]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.splitbtn{border-color:color-mix(in srgb,var(--area) 50%,var(--line));color:var(--area);background:var(--area-bg);font-size:12px;padding:3px 8px}
 @media (max-width:600px){.menu{left:8px!important;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);top:auto!important;width:auto;max-height:75vh}}
 .tip{position:fixed;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:320px;box-shadow:0 6px 24px rgba(0,0,0,.18);pointer-events:none;font-size:12px}
 .tip .ar{font-family:var(--f-ar);direction:rtl;text-align:right;color:var(--muted);margin-top:4px;line-height:1.6}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
-.modal .box{background:var(--panel);border-radius:12px;padding:16px;width:min(640px,100%);display:flex;flex-direction:column;gap:10px;max-height:90vh}
-.modal textarea{width:100%;min-height:240px;font-family:var(--f-mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;color:var(--ink)}
-.modal h3{margin:0;font-family:var(--f-display)}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .box{background:var(--panel);border-radius:12px;padding:16px;width:min(680px,100%);display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto}
+.modal textarea{width:100%;min-height:120px;font-family:var(--f-mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;color:var(--ink)}
+.modal h3{margin:0;font-family:var(--f-display);font-size:20px}
+.opt{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:8px}
+.opt .t{font-weight:600}
+.opt .d{grid-column:2;color:var(--muted);font-size:12.5px}
+.opt button{grid-row:span 2}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+
+/* split editor */
+.sp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.sp-share{font-family:var(--f-mono);font-size:22px;font-weight:500}
+.sp-bar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--sunk);border:1px solid var(--line)}
+.sp-bar i{display:block;height:100%;transition:width .15s}
+.sp-status{display:flex;justify-content:space-between;font-size:13px;margin-top:6px;gap:8px;flex-wrap:wrap}
+.sp-status b{font-family:var(--f-mono)}
+.sp-rows{display:flex;flex-direction:column;gap:6px}
+.sp-row{display:grid;grid-template-columns:12px minmax(0,1.3fr) minmax(90px,1fr) 78px 74px 28px;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.sp-row .sw{width:12px;height:12px;border-radius:3px}
+.sp-row input[type=text]{font-family:var(--f-ar);direction:rtl;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--panel);min-width:0;width:100%}
+.sp-row input[type=range]{width:100%;accent-color:var(--area)}
+.sp-row input[type=number]{width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 6px;background:var(--panel);font-family:var(--f-mono);text-align:right}
+.sp-row .gs{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
+.sp-cols{display:grid;grid-template-columns:12px minmax(0,1.3fr) minmax(90px,1fr) 78px 74px 28px;gap:8px;padding:0 8px}
+.sp-cols span{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+@media (max-width:560px){.sp-row,.sp-cols{grid-template-columns:12px minmax(0,1fr) 70px 28px}.sp-row input[type=range],.sp-cols .c3,.sp-row .gs,.sp-cols .c5{display:none}}
+.how{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--muted)}
+.how b{color:var(--ink)}
+
+footer.foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:24px 90px;color:var(--muted);font-size:12px}
+footer.foot img{width:84px;height:84px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 @media (prefers-reduced-motion:no-preference){.chip,.mr,.dm{transition:border-color .12s,background .12s}}
 </style>
 </head>
@@ -189,43 +241,63 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
   <header class="top">
     <div>
       <h1>Territory Builder</h1>
-      <div class="sub">Drag IMS bricks onto medical reps, reps onto district managers, and district managers onto regional managers. Geo share adds up at every level.</div>
+      <div class="sub">Assign IMS bricks, or single areas inside a brick, to medical reps. Group reps under district managers and district managers under regional managers. Geo share adds up at every level.</div>
     </div>
     <div class="toolbar">
-      <span class="lbl">Brick level</span>
-      <div class="seg" role="group" aria-label="Brick level">
-        <button id="m70" aria-pressed="true">70 bricks</button>
-        <button id="m148" aria-pressed="false">148 bricks</button>
-      </div>
-      <label class="switch" title="Show the areas (e.g. طنطا، العجمى) inside every brick"><input type="checkbox" id="showAr"> Show areas</label>
-      <button id="addRM" title="Adds a new regional manager slot to the board"><span class="dot rm"></span>Add regional manager</button>
-      <button id="addDM" title="Adds a new district manager slot to the board"><span class="dot dm"></span>Add district manager</button>
-      <button id="addMR" class="primary" title="Adds a new medical rep slot to the board">+ Add medical rep</button>
-      <button id="btnMore" class="ghost" aria-haspopup="true">Save / load ▾</button>
+      <button id="btnSave" class="primary">Save, export & share</button>
     </div>
   </header>
+
+  <div class="banner" id="sharedBanner" hidden>
+    <span><b>You're viewing a shared structure.</b> Changes here aren't saved until you keep it. Your own board is safe.</span>
+    <span class="spacer"></span>
+    <button id="keepShared" class="primary">Keep as my board</button>
+    <button id="leaveShared">Back to my board</button>
+  </div>
+  <div class="banner" id="customBanner" hidden>
+    <span id="customTxt"></span>
+    <span class="spacer"></span>
+    <button id="customReset">Use standard geo share</button>
+  </div>
 
   <section class="stats" id="stats"></section>
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tBoard" aria-selected="true">Board</button>
     <button role="tab" id="tBal" aria-selected="false">Balance table</button>
+    <button role="tab" id="tData" aria-selected="false">IMS bricks & geo share</button>
   </div>
 
   <div class="main" id="viewBoard">
     <aside class="pool" id="pool" aria-label="Unassigned bricks">
       <div class="pool-head">
+        <div class="pool-level">
+          <span class="lbl">Brick level</span>
+          <div class="seg" role="group" aria-label="Brick level">
+            <button id="m70" aria-pressed="true">70 bricks</button>
+            <button id="m148" aria-pressed="false">148 bricks</button>
+          </div>
+          <label class="switch" title="Show the areas inside every brick"><input type="checkbox" id="showAr"> Show areas</label>
+        </div>
         <h2>Unassigned bricks <span class="num" id="poolShare" style="font-size:13px;color:var(--muted)"></span></h2>
         <input type="search" id="q" placeholder="Search brick or area (English / عربي)">
         <div class="row" style="gap:6px;flex-wrap:nowrap">
           <select id="srt" aria-label="Sort bricks"><option value="ims">IMS brick order</option><option value="share">Geo share, high to low</option><option value="az">Name A–Z</option></select>
           <select id="grp" aria-label="Group bricks"><option value="">No grouping</option><option value="rg">Group by IMS region</option></select>
         </div>
-        <div class="legend">Click a brick to assign it to a rep, or drag it onto one. Shift-click to pick several. Drop a brick here to unassign it.</div>
+        <div class="legend">Click a brick to assign it or split it into areas. Drag it onto a rep. Shift-click to pick several. Drop here to unassign.</div>
       </div>
       <div class="pool-body" id="poolBody"></div>
     </aside>
-    <section class="board" id="board"></section>
+    <section class="right">
+      <div class="addbar">
+        <span class="lbl">Add to structure</span>
+        <button id="addMR" class="primary">+ Medical rep</button>
+        <button id="addDM"><span class="dot dm"></span>+ District manager</button>
+        <button id="addRM"><span class="dot rm"></span>+ Regional manager</button>
+      </div>
+      <section class="board" id="board"></section>
+    </section>
   </div>
 
   <section id="viewBal" hidden>
@@ -236,10 +308,34 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
         <span class="pill bad">&gt;35%</span> rebalance
         <span>· the black tick on each bar is the target share</span>
       </div>
-      <button id="copyTbl">Copy table for Excel</button>
+      <button id="copyTbl">Copy table</button>
     </div>
     <div class="tbl-wrap"><table id="balTbl"></table></div>
   </section>
+
+  <section id="viewData" hidden>
+    <div class="data-head">
+      <div class="row">
+        <div class="seg" role="group" aria-label="Table level">
+          <button id="d70" aria-pressed="true">70 bricks</button>
+          <button id="d148" aria-pressed="false">148 bricks</button>
+        </div>
+        <input type="search" id="dq" placeholder="Search brick or area">
+      </div>
+      <div class="row">
+        <button id="dlSheet" class="primary">Download brick sheet (Excel)</button>
+        <button id="ulSheet">Upload edited sheet</button>
+        <input type="file" id="ulFile" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <div class="how" style="margin-bottom:10px"><b>Want your own geo share?</b> Download the brick sheet, change the yellow <b>% Geo Share</b> column on the “148 Bricks” tab, save it, then upload it here. The new numbers apply only to your board in this browser. The standard IMS geo share stays the same for everyone.</div>
+    <div class="tbl-wrap"><table id="dataTbl"></table></div>
+  </section>
+
+  <footer class="foot">
+    <img src="logo.png" alt="Khaled Tolba logo" width="84" height="84">
+    <span>Territory Builder · Khaled Tolba</span>
+  </footer>
 </div>
 
 <div class="selbar" id="selbar" hidden>
@@ -250,45 +346,113 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 <div class="tip" id="tip" hidden></div>
 <div class="menu" id="menu" hidden role="dialog" aria-label="Brick options"></div>
 <div class="toast" id="toast" hidden></div>
-<div class="modal" id="modal" hidden>
+
+<!-- Save / export / share -->
+<div class="modal" id="mSave" hidden>
   <div class="box">
-    <h3 id="mTitle">Save or load a structure</h3>
-    <div class="sub" id="mSub"></div>
-    <textarea id="mText" spellcheck="false"></textarea>
+    <div class="row" style="justify-content:space-between"><h3>Save, export & share</h3><button class="ghost" data-close="mSave">Close ✕</button></div>
+    <div class="opt"><button id="xExcel" class="primary">Download Excel</button><span class="t">Structure report (Excel)</span><span class="d">A formatted workbook: the full hierarchy with geo share, each rep's bricks and areas, and what's still unassigned.</span></div>
+    <div class="opt"><button id="xLink">Copy share link</button><span class="t">Share on the site</span><span class="d">Creates a link that opens this exact structure on the site for anyone you send it to. They can view it and keep their own copy.</span></div>
+    <div class="opt"><button id="xFile">Download file</button><span class="t">Save to this device</span><span class="d">Saves a small structure file (.json) you can open again later on any device.</span></div>
+    <div class="opt"><button id="xOpen">Open file</button><span class="t">Open a saved structure</span><span class="d">Loads a structure file you saved before. It replaces the current board.</span><input type="file" id="openFile" accept=".json,.txt" hidden></div>
+    <textarea id="linkBox" readonly hidden aria-label="Share link"></textarea>
+    <div class="row"><span class="sub">Your work also saves automatically in this browser.</span><span class="spacer"></span><button id="xClear" class="danger">Clear board</button></div>
+  </div>
+</div>
+
+<!-- Split editor -->
+<div class="modal" id="mSplit" hidden>
+  <div class="box" role="dialog" aria-labelledby="spTitle">
+    <div class="sp-head">
+      <div>
+        <div class="lbl" style="color:var(--area)">Split brick into areas</div>
+        <h3 id="spTitle"></h3>
+        <div class="sub" id="spSub"></div>
+      </div>
+      <div style="text-align:right"><div class="lbl">Brick geo share</div><div class="sp-share" id="spShare"></div></div>
+    </div>
+    <div class="how">Give each area its part of this brick in <b>%</b>. The parts must add up to <b>100%</b>, so the areas together always equal the brick's geo share. Each area then becomes its own piece you can give to any rep.</div>
+    <div>
+      <div class="sp-bar" id="spBar"></div>
+      <div class="sp-status"><span id="spStat"></span><span id="spGs" class="sub"></span></div>
+    </div>
+    <div class="sp-cols"><span></span><span>Area</span><span class="c3">Part of brick</span><span>%</span><span class="c5">Geo share</span><span></span></div>
+    <div class="sp-rows" id="spRows"></div>
     <div class="row">
-      <button id="mCopy" class="primary">Copy</button>
-      <button id="mLoad">Load from this text</button>
-      <label class="row" style="gap:6px"><span class="lbl">or open file</span><input type="file" id="mFile" accept=".json,.txt"></label>
+      <button id="spAdd">+ Add area</button>
+      <button id="spEven">Split evenly</button>
+      <button id="spFill">Give the rest to the last area</button>
       <span class="spacer"></span>
-            <button id="mBlank" class="danger">Clear board</button>
-      <button id="mClose">Close</button>
+      <button id="spRemove" class="danger">Remove split</button>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button data-close="mSplit">Cancel</button>
+      <button id="spSave" class="primary">Save split</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload review -->
+<div class="modal" id="mUp" hidden>
+  <div class="box">
+    <h3>Use this geo share?</h3>
+    <div id="upInfo"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button data-close="mUp">Cancel</button>
+      <button id="upScale" hidden>Scale to 100% and use</button>
+      <button id="upApply" class="primary">Use this geo share</button>
     </div>
   </div>
 </div>
 
 <script src="tb-data.js"></script>
+<script src="vendor/lz-string.min.js"></script>
+<script src="vendor/exceljs.min.js" defer></script>
 <script>
-const RAW = window.TB_DATA;
-// [id, region, brick70, brick148, share, arabic]
-const B = RAW.map(r=>({id:r[0],rg:r[1],p:r[2],n:r[3],s:r[4],ar:r[5]}));
-const BY = Object.fromEntries(B.map(b=>[b.id,b]));
-const PARENTS = []; const KIDS = {};
-B.forEach(b=>{ if(!KIDS[b.p]){KIDS[b.p]=[];PARENTS.push(b.p);} KIDS[b.p].push(b.id); });
-const REGIONS = [...new Set(B.map(b=>b.rg))];
-const TOTAL = B.reduce((a,b)=>a+b.s,0);
-const KEY='territory-builder-v2';
+// ---------- data ----------
+const RAW = window.TB_DATA; // [id, region, brick70, brick148, share, areas]
+const BASE = RAW.map(r=>({id:r[0],rg:r[1],p:r[2],n:r[3],s0:r[4],ar:r[5]}));
+const BY = {}; BASE.forEach(b=>BY[b.id]=b);
+const PARENTS=[], KIDS={};
+BASE.forEach(b=>{ if(!KIDS[b.p]){KIDS[b.p]=[];PARENTS.push(b.p);} KIDS[b.p].push(b.id); });
+const REGIONS=[...new Set(BASE.map(b=>b.rg))];
+const KEY='territory-builder-v3', OLDKEY='territory-builder-v2';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const f2=v=>v.toFixed(2);
+const f2=v=>(+v).toFixed(2);
+const AREA_COLORS=['#c47f1a','#2f8f83','#7a5bb5','#c2504f','#3d7cc9','#8a9a2b','#d0679b','#4e9a5c','#a86b3c','#5a6fd1','#b8913a','#3aa0a8'];
+const areasList=bid=>BY[bid].ar.split(/\s*[،–]\s*/).map(s=>s.trim()).filter(Boolean);
 
-let S, sel=new Set(), view='board', uid=1, lastAdded=null;
+let S, sel=new Set(), view='board', dataMode='70', uid=1, lastAdded=null, sharedView=false;
 const nid=p=>p+(Date.now().toString(36))+(uid++);
-
-function blank(){return {v:1,mode:'70',target:'',people:[],assign:{}};}
-function load(){try{const t=localStorage.getItem(KEY);if(t){const s=JSON.parse(t);if(valid(s))return s;}}catch(e){}return blank();}
+function blank(){return {v:3,mode:'70',target:'',showAreas:false,people:[],assign:{},splits:{},custom:null};}
 function valid(s){return s&&Array.isArray(s.people)&&s.assign&&typeof s.assign==='object';}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-S=load();
+function normalize(s){
+  s=Object.assign(blank(),s);
+  const a={}; for(const [k,v] of Object.entries(s.assign)){ a[/^\d+$/.test(k)?'b'+k:k]=v; } s.assign=a;
+  s.splits=s.splits||{}; s.v=3; return s;
+}
+function load(){
+  try{const t=localStorage.getItem(KEY)||localStorage.getItem(OLDKEY); if(t){const s=JSON.parse(t); if(valid(s)) return normalize(s);}}catch(e){}
+  return blank();
+}
+function save(){ if(sharedView) return; try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
+
+// ---------- shares & units ----------
+const shareOf=bid=>(S.custom&&S.custom.shares&&S.custom.shares[bid]!=null)?+S.custom.shares[bid]:BY[bid].s0;
+const totalShare=()=>BASE.reduce((a,b)=>a+shareOf(b.id),0);
+let UNITS=[], UM={}, UNITS_PER_PARENT={};
+function buildUnits(){
+  UNITS=[]; UM={}; UNITS_PER_PARENT={};
+  BASE.forEach(b=>{
+    const sp=S.splits[b.id], bs=shareOf(b.id);
+    if(sp&&sp.length){ sp.forEach((a,k)=>{ const u={id:'b'+b.id+'a'+k,bid:b.id,p:b.p,n:b.n,rg:b.rg,area:a.n,pct:+a.p,k,s:bs*a.p/100}; UNITS.push(u); UM[u.id]=u; }); }
+    else { const u={id:'b'+b.id,bid:b.id,p:b.p,n:b.n,rg:b.rg,area:null,s:bs}; UNITS.push(u); UM[u.id]=u; }
+  });
+  UNITS.forEach(u=>UNITS_PER_PARENT[u.p]=(UNITS_PER_PARENT[u.p]||0)+1);
+}
+const ORDER={}; // unit order index
+function unitsOf(mr){ return UNITS.filter(u=>S.assign[u.id]===mr).map(u=>u.id); }
 
 // ---------- metrics ----------
 const P=id=>S.people.find(p=>p.id===id);
@@ -296,19 +460,16 @@ const kids=(id,role)=>S.people.filter(p=>p.parent===id&&p.role===role);
 const loose=role=>S.people.filter(p=>p.role===role&&(!p.parent||!P(p.parent)));
 function compute(){
   const m={};
-  S.people.forEach(p=>m[p.id]={share:0,bricks:new Set(),subs:0,mrs:0,dms:0});
-  for(const [bid,mr] of Object.entries(S.assign)){ if(!m[mr]||!BY[bid]){delete S.assign[bid];continue;} const b=BY[bid]; m[mr].share+=b.s; m[mr].subs++; m[mr].bricks.add(b.p); }
-  S.people.filter(p=>p.role==='MR').forEach(mr=>{const d=P(mr.parent); if(d){m[d.id].share+=m[mr.id].share;m[d.id].mrs++;m[d.id].subs+=m[mr.id].subs;
-      const r=P(d.parent); if(r){m[r.id].share+=m[mr.id].share;m[r.id].mrs++;m[r.id].subs+=m[mr.id].subs;}}});
+  S.people.forEach(p=>m[p.id]={share:0,bricks:new Set(),units:0,mrs:0,dms:0});
+  for(const [uid_,mr] of Object.entries(S.assign)){ const u=UM[uid_]; if(!u||!m[mr]){delete S.assign[uid_];continue;} m[mr].share+=u.s; m[mr].units++; m[mr].bricks.add(u.p); }
+  S.people.filter(p=>p.role==='MR').forEach(mr=>{const d=P(mr.parent); if(d){m[d.id].share+=m[mr.id].share;m[d.id].mrs++;m[d.id].units+=m[mr.id].units;
+      const r=P(d.parent); if(r){m[r.id].share+=m[mr.id].share;m[r.id].mrs++;m[r.id].units+=m[mr.id].units;}}});
   S.people.filter(p=>p.role==='DM').forEach(d=>{const r=P(d.parent); if(r) m[r.id].dms++;});
   return m;
 }
 function counts(){const c={RM:0,DM:0,MR:0};S.people.forEach(p=>c[p.role]++);return c;}
-function assignedShare(){let a=0;for(const bid in S.assign)if(BY[bid])a+=BY[bid].s;return a;}
-function target(){
-  const t=parseFloat(S.target); if(t>0) return t;
-  const n=counts().MR; return n? assignedShare()/n : 0;
-}
+function assignedShare(){let a=0;for(const k in S.assign) if(UM[k]) a+=UM[k].s; return a;}
+function target(){ const t=parseFloat(S.target); if(t>0) return t; const n=counts().MR; return n?assignedShare()/n:0; }
 function dev(v,t){ if(!t) return null; return (v-t)/t*100; }
 function pill(v,t){
   const d=dev(v,t); if(d===null) return '<span class="pill none">—</span>';
@@ -317,84 +478,85 @@ function pill(v,t){
 }
 
 // ---------- chips ----------
-// A chip represents a set of 148-level ids. In 70 mode it is a 70 brick (possibly partial).
 function chipsFor(ids){
-  if(S.mode==='148') return ids.map(id=>({key:'b'+id,ids:[id],name:BY[id].n,share:BY[id].s,part:null,tipId:id}));
-  const g={}; ids.forEach(id=>{const p=BY[id].p;(g[p]=g[p]||[]).push(id);});
-  return PARENTS.filter(p=>g[p]).map(p=>({key:'p'+p,ids:g[p],name:p,share:g[p].reduce((a,i)=>a+BY[i].s,0),part:g[p].length<KIDS[p].length?`${g[p].length}/${KIDS[p].length}`:null,tipP:p}));
+  const set=new Set(ids); const us=UNITS.filter(u=>set.has(u.id));
+  if(S.mode==='148') return us.map(u=>({ids:[u.id],name:u.n,area:u.area,share:u.s,part:null,isArea:!!u.area,tipU:u.id}));
+  const g={}; us.forEach(u=>{(g[u.p]=g[u.p]||[]).push(u);});
+  return PARENTS.filter(p=>g[p]).map(p=>{ const list=g[p]; const tot=UNITS_PER_PARENT[p];
+    return {ids:list.map(u=>u.id),name:p,area:null,share:list.reduce((a,u)=>a+u.s,0),part:list.length<tot?`${list.length}/${tot}`:null,isArea:list.some(u=>u.area),tipP:p}; });
 }
-const areasOf=id=>BY[id].ar;
-function areasHTML(ids,showName){
-  return ids.map(i=>`<div>${showName?`<b>${esc(BY[i].n)}</b> `:''}${esc(areasOf(i))}</div>`).join('');
+function unitAreasHTML(ids,withName){
+  return ids.map(id=>{const u=UM[id]; const nm=withName||u.area?`<b>${esc(u.n)}</b> `:'';
+    return `<div>${nm}${u.area?`${esc(u.area)} <span class="num" style="font-size:11px">(${f2(u.pct)}%)</span>`:esc(BY[u.bid].ar)}</div>`;}).join('');
 }
 function chipHTML(c,from){
   const isSel=c.ids.every(i=>sel.has(i));
-  const head=`<span class="n">${esc(c.name)}</span>${c.part?`<span class="p" title="Part of this brick only">${c.part}</span>`:''}<span class="s">${f2(c.share)}</span>`;
-  const attrs=`draggable="true" tabindex="0" role="button" aria-haspopup="dialog" data-ids="${c.ids.join(',')}" data-from="${from||''}" data-tip="${c.tipId||''}" data-tipp="${esc(c.tipP||'')}"`;
-  if(S.showAreas) return `<span class="chip wide${isSel?' sel':''}" ${attrs}><span class="top">${head}</span><span class="ar-list">${areasHTML(c.ids,S.mode==='70')}</span></span>`;
-  return `<span class="chip${isSel?' sel':''}" ${attrs}>${head}</span>`;
+  const head=`<span class="n">${esc(c.name)}</span>${c.area?`<span class="ar-tag">${esc(c.area)}</span>`:''}${c.part?`<span class="p" title="Only part of this brick">${c.part}</span>`:''}<span class="s">${f2(c.share)}</span>`;
+  const cls=`chip${c.isArea?' is-area':''}${isSel?' sel':''}`;
+  const attrs=`draggable="true" tabindex="0" role="button" aria-haspopup="dialog" data-ids="${c.ids.join(',')}" data-from="${from||''}" data-tipu="${c.tipU||''}" data-tipp="${esc(c.tipP||'')}"`;
+  if(S.showAreas) return `<span class="${cls} wide" ${attrs}><span class="top">${head}</span><span class="ar-list">${unitAreasHTML(c.ids,S.mode==='70')}</span></span>`;
+  return `<span class="${cls}" ${attrs}>${head}</span>`;
 }
 
 // ---------- render ----------
 function render(){
-  $('#showAr').checked=!!S.showAreas; $('#m70').setAttribute('aria-pressed',S.mode==='70');$('#m148').setAttribute('aria-pressed',S.mode==='148');
+  buildUnits();
+  $('#showAr').checked=!!S.showAreas;
+  ['m70','d70'].forEach(i=>$('#'+i).setAttribute('aria-pressed',S.mode==='70'));
+  ['m148','d148'].forEach(i=>$('#'+i).setAttribute('aria-pressed',S.mode==='148'));
   const m=compute(); const t=target();
-  renderStats(m,t); renderPool(); renderBoard(m,t);
+  renderBanners(); renderStats(m,t); renderPool(); renderBoard(m,t);
   if(view==='bal') renderBal(m,t);
+  if(view==='data') renderData();
   renderSel(); save();
 }
+function renderBanners(){
+  $('#sharedBanner').hidden=!sharedView;
+  const c=S.custom; $('#customBanner').hidden=!c;
+  if(c) $('#customTxt').innerHTML=`<b>Using your own geo share</b> from “${esc(c.name)}” (${esc(c.at)}), total ${f2(totalShare())}%. The standard IMS geo share is unchanged.`;
+}
 function renderStats(m,t){
-  const c=counts(), a=assignedShare();
+  const c=counts(), a=assignedShare(), T=totalShare();
   const mrs=S.people.filter(p=>p.role==='MR').map(p=>m[p.id].share);
   const mn=mrs.length?Math.min(...mrs):0, mx=mrs.length?Math.max(...mrs):0;
   const avg=mrs.length?mrs.reduce((x,y)=>x+y,0)/mrs.length:0;
   const sd=mrs.length?Math.sqrt(mrs.reduce((x,y)=>x+(y-avg)**2,0)/mrs.length):0;
   const cv=avg?sd/avg*100:0;
   const off=S.people.filter(p=>p.role==='MR'&&t&&Math.abs(dev(m[p.id].share,t))>35).length;
+  const nSplit=Object.keys(S.splits).length;
   $('#stats').innerHTML=`
-   <div class="stat"><span class="lbl">Geo share assigned</span><span class="v">${f2(a)}<small>%</small></span><div class="bar"><i style="width:${Math.min(100,a)}%"></i></div></div>
+   <div class="stat"><span class="lbl">Geo share assigned</span><span class="v">${f2(a)}<small>% of ${f2(T)}</small></span><div class="bar"><i style="width:${Math.min(100,a/T*100)}%"></i></div></div>
    <div class="stat"><span class="lbl">Team size</span><span class="v">${c.RM} · ${c.DM} · ${c.MR}</span><span class="sub" style="font-size:11px;white-space:nowrap">Regional · District · Reps</span></div>
-   <div class="stat"><span class="lbl">Target share per rep</span><span class="v"><input id="tgt" class="num" inputmode="decimal" placeholder="${t?f2(t):'auto'}" value="${esc(S.target)}" aria-label="Target share per rep"><small> %</small></span><span class="sub" style="font-size:11px">${S.target?'Your target':'Auto: average of current reps'} · 100% needs ${t?Math.round(TOTAL/t):'—'} reps</span></div>
+   <div class="stat"><span class="lbl">Target share per rep</span><span class="v"><input id="tgt" class="num" inputmode="decimal" placeholder="${t?f2(t):'auto'}" value="${esc(S.target)}" aria-label="Target share per rep"><small> %</small></span><span class="sub" style="font-size:11px">${S.target?'Your target':'Auto: average of current reps'} · 100% needs ${t?Math.round(T/t):'—'} reps</span></div>
    <div class="stat"><span class="lbl">Rep share range</span><span class="v">${f2(mn)} – ${f2(mx)}<small>%</small></span></div>
-   <div class="stat"><span class="lbl">Balance (spread)</span><span class="v">${mrs.length?cv.toFixed(0):'—'}<small>% CV</small></span><span class="sub" style="font-size:11px">Lower is more even</span></div>
+   <div class="stat"><span class="lbl">Balance (spread)</span><span class="v">${mrs.length?cv.toFixed(0):'—'}<small>% CV</small></span><span class="sub" style="font-size:11px">Lower is more even · ${nSplit} brick${nSplit===1?'':'s'} split into areas</span></div>
    <div class="stat"><span class="lbl">Reps to rebalance</span><span class="v" style="color:${off?'var(--bad)':'var(--good)'}">${off}</span><span class="sub" style="font-size:11px">More than 35% off target</span></div>`;
   const ti=$('#tgt'); ti.addEventListener('change',()=>{S.target=ti.value.trim().replace(',','.');render();});
 }
+function matchUnit(u,q){ if(!q) return true; return (u.n+' '+u.p+' '+(u.area||'')+' '+BY[u.bid].ar).toLowerCase().includes(q); }
 function renderPool(){
   const q=$('#q').value.trim().toLowerCase(), grp=$('#grp').value, srt=$('#srt').value;
-  const free=B.filter(b=>!S.assign[b.id]);
-  const fs=free.reduce((a,b)=>a+b.s,0);
-  $('#poolShare').textContent=`${f2(fs)}% · ${S.mode==='70'?new Set(free.map(b=>b.p)).size:free.length} left`;
+  const free=UNITS.filter(u=>!S.assign[u.id]);
+  const fs=free.reduce((a,u)=>a+u.s,0);
+  $('#poolShare').textContent=`${f2(fs)}% · ${S.mode==='70'?new Set(free.map(u=>u.p)).size:free.length} left`;
   const sortC=cs=>{ if(srt==='share') cs.sort((a,b)=>b.share-a.share); else if(srt==='az') cs.sort((a,b)=>a.name.localeCompare(b.name)); return cs; };
-  const match=id=>{const b=BY[id];return !q||(b.n+' '+b.p+' '+b.ar).toLowerCase().includes(q);};
   let html='';
-  if(!grp){
-    const ids=free.map(b=>b.id).filter(match);
-    html=ids.length?`<div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div>`:'';
-  } else {
-    REGIONS.forEach(rg=>{
-      const ids=free.filter(b=>b.rg===rg).map(b=>b.id).filter(match);
-      if(!ids.length) return;
-      const all=free.filter(b=>b.rg===rg).reduce((a,b)=>a+b.s,0);
-      html+=`<div class="rg"><h3><span>${esc(rg)}</span><span class="num">${f2(all)}%</span></h3><div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div></div>`;
-    });
-  }
+  if(!grp){ const ids=free.filter(u=>matchUnit(u,q)).map(u=>u.id); html=ids.length?`<div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div>`:''; }
+  else REGIONS.forEach(rg=>{ const inRg=free.filter(u=>u.rg===rg); const ids=inRg.filter(u=>matchUnit(u,q)).map(u=>u.id); if(!ids.length) return;
+    html+=`<div class="rg"><h3><span>${esc(rg)}</span><span class="num">${f2(inRg.reduce((a,u)=>a+u.s,0))}%</span></h3><div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div></div>`; });
   $('#poolBody').innerHTML=html||`<div class="empty">${free.length?'No bricks match your search.':'Every brick is assigned. Drag a brick back here to free it.'}</div>`;
 }
 function mrHTML(p,m,t){
-  const ids=Object.keys(S.assign).filter(k=>S.assign[k]===p.id).map(Number).sort((a,b)=>a-b);
-  const x=m[p.id];
+  const ids=unitsOf(p.id); const x=m[p.id];
   return `<div class="mr${p.id===lastAdded?' new':''}" data-person="${p.id}">
     <div class="blk-head">
       <span class="handle" draggable="true" data-drag-person="${p.id}" title="Drag to move this rep to another district manager">⋮⋮</span>
       <span class="role mr">MR</span>
       <input class="name" value="${esc(p.name)}" data-rename="${p.id}" aria-label="Rep name">
       <button class="ghost" data-del="${p.id}" title="Remove this rep">✕</button>
-      <span class="mr-stats"><span class="share">${f2(x.share)}%</span>${pill(x.share,t)}<span class="sub" style="font-size:11px">${x.bricks.size} bricks</span><span class="spacer"></span><button class="ghost place" data-place="${p.id}" title="Place selected bricks here">Place here</button></span>
+      <span class="mr-stats"><span class="share">${f2(x.share)}%</span>${pill(x.share,t)}<span class="sub" style="font-size:11px">${x.bricks.size} bricks</span><span class="spacer"></span><button class="ghost place" data-place="${p.id}">Place here</button></span>
     </div>
-    <div class="zone" data-zone="${p.id}">
-      <div class="chips">${ids.length?chipsFor(ids).map(c=>chipHTML(c,p.id)).join(''):'<span class="empty">Drop bricks here</span>'}</div>
-    </div>
+    <div class="zone" data-zone="${p.id}"><div class="chips">${ids.length?chipsFor(ids).map(c=>chipHTML(c,p.id)).join(''):'<span class="empty">Drop bricks here</span>'}</div></div>
   </div>`;
 }
 function dmHTML(d,m,t,dmT){
@@ -409,19 +571,16 @@ function dmHTML(d,m,t,dmT){
       <input class="name" value="${esc(d.name)}" data-rename="${d.id}" aria-label="District manager name">
       <button class="ghost" data-del="${d.id}" title="Remove this district manager">✕</button>
     </div>
-    <div class="blk-head" style="padding-top:0">
-      <span class="meta"><b>${f2(x.share)}%</b>${pill(x.share,dmT)}<span>${x.mrs} reps</span><span>avg ${x.mrs?f2(x.share/x.mrs):'—'}%/rep</span></span>
-    </div>
+    <div class="blk-head" style="padding-top:0"><span class="meta"><b>${f2(x.share)}%</b>${pill(x.share,dmT)}<span>${x.mrs} reps</span><span>avg ${x.mrs?f2(x.share/x.mrs):'—'}%/rep</span></span></div>
     <div class="mrs" data-mrs="${d.id}">${mrs.map(p=>mrHTML(p,m,t)).join('')||'<span class="empty">Drag reps here or add one</span>'}</div>
     <div class="add-row"><button class="ghost" data-addmr="${d.id}">+ Medical rep</button></div>
   </div>`;
 }
 function renderBoard(m,t){
-  const c=counts();
-  const AS=assignedShare(); const dmT=c.DM?AS/c.DM:0, rmT=c.RM?AS/c.RM:0;
+  const c=counts(), AS=assignedShare(); const dmT=c.DM?AS/c.DM:0, rmT=c.RM?AS/c.RM:0;
   let h='';
   S.people.filter(p=>p.role==='RM').forEach(r=>{
-    const x=m[r.id]; const dms=kids(r.id,'DM');
+    const x=m[r.id];
     h+=`<div class="rm${r.id===lastAdded?' new':''}" data-person="${r.id}">
       <div class="blk-head">
         <span class="role rm">RM</span>
@@ -431,7 +590,7 @@ function renderBoard(m,t){
         <button class="ghost" data-adddm="${r.id}">+ District manager</button>
         <button class="ghost" data-del="${r.id}" title="Remove this regional manager">✕</button>
       </div>
-      <div class="dms" data-dms="${r.id}">${dms.map(d=>dmHTML(d,m,t,dmT)).join('')||'<span class="empty" style="padding:8px">Drag district managers here or add one</span>'}</div>
+      <div class="dms" data-dms="${r.id}">${kids(r.id,'DM').map(d=>dmHTML(d,m,t,dmT)).join('')||'<span class="empty" style="padding:8px">Drag district managers here or add one</span>'}</div>
     </div>`;
   });
   const ld=loose('DM'), lm=loose('MR');
@@ -441,81 +600,101 @@ function renderBoard(m,t){
       <div class="dms" data-dms="">${ld.map(d=>dmHTML(d,m,t,dmT)).join('')}${(lm.length||!ld.length)?dmHTML(null,m,t):''}</div>
     </div>`;
   }
-  if(!S.people.length) h=`<div class="rm loose"><div class="blk-head" style="flex-direction:column;align-items:flex-start;gap:6px;padding:20px"><span style="font-family:var(--f-display);font-size:18px;font-weight:700">Start your structure</span><span class="sub">1. Click <b>+ Add medical rep</b> and drag bricks onto it. 2. Add <b>district managers</b> and drag reps into them. 3. Add <b>regional managers</b> and drag district managers into them. Geo share adds up at each level as you go.</span></div><div class="dms" data-dms="">${dmHTML(null,m,t)}</div></div>`;
+  if(!S.people.length) h=`<div class="rm loose"><div class="blk-head" style="flex-direction:column;align-items:flex-start;gap:6px;padding:20px"><span style="font-family:var(--f-display);font-size:18px;font-weight:700">Start your structure</span><span class="sub">1. Click <b>+ Medical rep</b> above and drag bricks onto it, or click a brick and choose a rep. 2. Add <b>district managers</b> and drag reps into them. 3. Add <b>regional managers</b> and drag district managers into them. To give part of a brick to a rep, click the brick and choose <b>Split into areas</b>.</span></div><div class="dms" data-dms="">${dmHTML(null,m,t)}</div></div>`;
   $('#board').innerHTML=h;
 }
+function bricksText(mr){ return chipsFor(unitsOf(mr)).map(c=>c.name+(c.area?` – ${c.area}`:'')+(c.part?` (${c.part})`:'')).join(', '); }
 function renderBal(m,t){
-  const c=counts(); const AS=assignedShare(); const dmT=c.DM?AS/c.DM:0, rmT=c.RM?AS/c.RM:0;
+  const c=counts(), AS=assignedShare(); const dmT=c.DM?AS/c.DM:0, rmT=c.RM?AS/c.RM:0;
   const mx=Math.max(t,...S.people.map(p=>p.role==='MR'?m[p.id].share:0),0.01);
-  const bar=(v,tt,scale)=>`<div class="hbar"><i style="width:${Math.min(100,v/scale*100)}%"></i>${tt?`<u style="left:${Math.min(100,tt/scale*100)}%"></u>`:''}</div>`;
-  const bricks=id=>{const ids=Object.keys(S.assign).filter(k=>S.assign[k]===id).map(Number);return chipsFor(ids).map(c=>c.name+(c.part?` (${c.part})`:'')).join(', ');};
-  let rows=[]; // for TSV
-  let h=`<thead><tr><th>Level</th><th>Name</th><th>Reports to</th><th class="r">Reps</th><th class="r">Bricks</th><th class="r">Geo share %</th><th>vs target</th><th>Share</th><th>Bricks list</th></tr></thead><tbody>`;
-  const mrRow=(p,dname)=>{const x=m[p.id];rows.push(['MR',p.name,dname,'',x.bricks.size+' / '+x.subs,f2(x.share),dev(x.share,t)===null?'':dev(x.share,t).toFixed(0)+'%',bricks(p.id)]);
-    return `<tr><td><span class="role mr">MR</span></td><td>${esc(p.name)}</td><td>${esc(dname)}</td><td></td><td class="r num">${x.bricks.size} <span style="color:var(--muted)">/ ${x.subs}</span></td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,t)}</td><td>${bar(x.share,t,mx)}</td><td style="white-space:normal;min-width:240px;color:var(--muted);font-size:12px">${esc(bricks(p.id))}</td></tr>`;};
-  const dmRow=(d,rname)=>{const x=m[d.id];rows.push(['DM',d.name,rname,x.mrs,x.subs,f2(x.share),dev(x.share,dmT)===null?'':dev(x.share,dmT).toFixed(0)+'%','']);
-    let s=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${esc(d.name)}</td><td>${esc(rname)}</td><td class="r num">${x.mrs}</td><td class="r num">${x.subs}</td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,dmT)}</td><td></td><td></td></tr>`;
+  const bar=(v,tt)=>`<div class="hbar"><i style="width:${Math.min(100,v/mx*100)}%"></i>${tt?`<u style="left:${Math.min(100,tt/mx*100)}%"></u>`:''}</div>`;
+  const rows=[]; let h=`<thead><tr><th>Level</th><th>Name</th><th>Reports to</th><th class="r">Reps</th><th class="r">Bricks</th><th class="r">Geo share %</th><th>vs target</th><th>Share</th><th>Bricks list</th></tr></thead><tbody>`;
+  const dv=(v,tt)=>dev(v,tt)===null?'':dev(v,tt).toFixed(0)+'%';
+  const mrRow=(p,dn)=>{const x=m[p.id];rows.push(['MR',p.name,dn,'',x.bricks.size,f2(x.share),dv(x.share,t),bricksText(p.id)]);
+    return `<tr><td><span class="role mr">MR</span></td><td>${esc(p.name)}</td><td>${esc(dn)}</td><td></td><td class="r num">${x.bricks.size}</td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,t)}</td><td>${bar(x.share,t)}</td><td style="white-space:normal;min-width:240px;color:var(--muted);font-size:12px">${esc(bricksText(p.id))}</td></tr>`;};
+  const dmRow=(d,rn)=>{const x=m[d.id];rows.push(['DM',d.name,rn,x.mrs,'',f2(x.share),dv(x.share,dmT),'']);
+    let s=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${esc(d.name)}</td><td>${esc(rn)}</td><td class="r num">${x.mrs}</td><td></td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,dmT)}</td><td></td><td></td></tr>`;
     kids(d.id,'MR').forEach(p=>s+=mrRow(p,d.name)); return s;};
-  S.people.filter(p=>p.role==='RM').forEach(r=>{const x=m[r.id];rows.push(['RM',r.name,'',x.mrs,x.subs,f2(x.share),dev(x.share,rmT)===null?'':dev(x.share,rmT).toFixed(0)+'%','']);
-    h+=`<tr class="grp-rm"><td><span class="role rm">RM</span></td><td>${esc(r.name)}</td><td></td><td class="r num">${x.mrs}</td><td class="r num">${x.subs}</td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,rmT)}</td><td></td><td></td></tr>`;
+  S.people.filter(p=>p.role==='RM').forEach(r=>{const x=m[r.id];rows.push(['RM',r.name,'',x.mrs,'',f2(x.share),dv(x.share,rmT),'']);
+    h+=`<tr class="grp-rm"><td><span class="role rm">RM</span></td><td>${esc(r.name)}</td><td></td><td class="r num">${x.mrs}</td><td></td><td class="r num">${f2(x.share)}</td><td>${pill(x.share,rmT)}</td><td></td><td></td></tr>`;
     kids(r.id,'DM').forEach(d=>h+=dmRow(d,r.name));});
-  loose('DM').forEach(d=>h+=dmRow(d,'—'));
-  loose('MR').forEach(p=>h+=mrRow(p,'—'));
+  loose('DM').forEach(d=>h+=dmRow(d,'—')); loose('MR').forEach(p=>h+=mrRow(p,'—'));
   if(!S.people.length) h+=`<tr><td colspan="9" class="empty">Add reps and managers on the Board tab to see the balance.</td></tr>`;
   $('#balTbl').innerHTML=h+'</tbody>';
-  $('#balTbl').dataset.tsv=[['Level','Name','Reports to','Reps','Bricks (70 / 148)','Geo share %','vs target','Bricks list'],...rows].map(r=>r.join('\t')).join('\n');
+  $('#balTbl').dataset.tsv=[['Level','Name','Reports to','Reps','Bricks','Geo share %','vs target','Bricks list'],...rows].map(r=>r.join('\t')).join('\n');
+}
+function renderData(){
+  const q=$('#dq').value.trim().toLowerCase(); const custom=!!S.custom;
+  const owner={}; for(const [k,v] of Object.entries(S.assign)) if(UM[k]) owner[UM[k].bid]=(owner[UM[k].bid]||new Set()).add(P(v)?.name||'');
+  let h;
+  if(dataMode==='70'){
+    h=`<thead><tr><th>#</th><th>IMS region</th><th>70 brick</th><th class="r">148 bricks</th><th class="r">% Geo share</th>${custom?'<th class="r">Standard %</th>':''}<th>Areas</th></tr></thead><tbody>`;
+    PARENTS.forEach((p,i)=>{ const ks=KIDS[p]; const txt=(p+' '+ks.map(k=>BY[k].n+' '+BY[k].ar).join(' ')).toLowerCase(); if(q&&!txt.includes(q)) return;
+      const s=ks.reduce((a,k)=>a+shareOf(k),0), s0=ks.reduce((a,k)=>a+BY[k].s0,0);
+      h+=`<tr><td class="num">${i+1}</td><td>${esc(BY[ks[0]].rg)}</td><td><b>${esc(p)}</b></td><td class="r num">${ks.length}</td><td class="r num ${custom&&Math.abs(s-s0)>1e-6?'chg':''}">${f2(s)}</td>${custom?`<td class="r num">${f2(s0)}</td>`:''}<td class="ar">${ks.map(k=>`<div><b>${esc(BY[k].n)}</b> ${esc(BY[k].ar)}</div>`).join('')}</td></tr>`; });
+  } else {
+    h=`<thead><tr><th>B#</th><th>IMS region</th><th>70 brick</th><th>148 brick</th><th class="r">% Geo share</th>${custom?'<th class="r">Standard %</th>':''}<th>Areas</th><th>Split</th></tr></thead><tbody>`;
+    BASE.forEach(b=>{ const txt=(b.n+' '+b.p+' '+b.ar).toLowerCase(); if(q&&!txt.includes(q)) return; const s=shareOf(b.id); const sp=S.splits[b.id];
+      h+=`<tr><td class="num">${b.id}</td><td>${esc(b.rg)}</td><td>${esc(b.p)}</td><td><b>${esc(b.n)}</b></td><td class="r num ${custom&&Math.abs(s-b.s0)>1e-6?'chg':''}">${f2(s)}</td>${custom?`<td class="r num">${f2(b.s0)}</td>`:''}<td class="ar">${sp?sp.map(a=>`<div>${esc(a.n)} <span class="num" style="font-size:11px">${f2(a.p)}% = ${f2(s*a.p/100)}</span></div>`).join(''):esc(b.ar)}</td><td>${sp?`<span class="pill area">${sp.length} areas</span>`:''} <button class="link" data-split="${b.id}">${sp?'Edit':'Split'}</button></td></tr>`; });
+  }
+  $('#dataTbl').innerHTML=h+'</tbody>';
 }
 function renderSel(){
   document.body.classList.toggle('has-sel',sel.size>0);
   $('#selbar').hidden=!sel.size;
-  if(sel.size){const s=[...sel].reduce((a,i)=>a+BY[i].s,0);$('#selTxt').innerHTML=`<b>${sel.size}</b> sub-bricks selected · <span class="num">${f2(s)}%</span> · press “Place here” on a rep, or drag them`;}
+  if(sel.size){const s=[...sel].reduce((a,i)=>a+(UM[i]?UM[i].s:0),0);$('#selTxt').innerHTML=`<b>${sel.size}</b> pieces selected · <span class="num">${f2(s)}%</span> · press “Place here” on a rep, or drag them`;}
 }
-function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,ms);}
+function toast(msg,ms=2800){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,ms);}
 
 // ---------- actions ----------
 function addPerson(role,parent=null){
   const c=counts(); const label={RM:'Regional manager',DM:'District manager',MR:'Medical rep'}[role];
   const p={id:nid(role),role,name:`${label} ${c[role]+1}`,parent};
-  S.people.push(p); lastAdded=p.id; render();
+  S.people.push(p); lastAdded=p.id; if(view!=='board') $('#tBoard').click(); render();
   const card=document.querySelector(`[data-person="${p.id}"]`);
   if(card) card.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  const el=document.querySelector(`[data-rename="${p.id}"]`); if(el){setTimeout(()=>{el.focus({preventScroll:true});el.select();},250);}
+  const el=document.querySelector(`[data-rename="${p.id}"]`); if(el) setTimeout(()=>{el.focus({preventScroll:true});el.select();},250);
   const under=parent?` under ${P(parent).name}`:'';
-  toast(role==='MR'?`New medical rep “${p.name}” added${under}. Type a name, then drag bricks onto it or click a brick → Assign.`:
+  toast(role==='MR'?`New medical rep “${p.name}” added${under}. Type a name, then drag bricks onto it or click a brick → assign.`:
         role==='DM'?`New district manager “${p.name}” added${under}. Type a name, then add reps inside it or drag reps in.`:
-        `New regional manager “${p.name}” added. Type a name, then drag district managers into it.`, 4500);
+        `New regional manager “${p.name}” added. Type a name, then drag district managers into it.`,4500);
   clearTimeout(addPerson.h); addPerson.h=setTimeout(()=>{lastAdded=null;document.querySelectorAll('.new').forEach(x=>x.classList.remove('new'));},2600);
+  return p;
 }
 function assign(ids,mr){ ids.forEach(i=>{ if(mr) S.assign[i]=mr; else delete S.assign[i]; }); sel.clear(); render(); }
 let pendingDel=null;
 function del(id,btn){
   if(pendingDel!==id){pendingDel=id;btn.textContent='Remove?';btn.classList.add('danger');setTimeout(()=>{if(pendingDel===id){pendingDel=null;btn.textContent='✕';btn.classList.remove('danger');}},2500);return;}
   pendingDel=null; const p=P(id);
-  if(p.role==='MR'){ for(const k in S.assign) if(S.assign[k]===id) delete S.assign[k]; }
+  if(p.role==='MR') for(const k in S.assign) if(S.assign[k]===id) delete S.assign[k];
   S.people.forEach(c=>{if(c.parent===id) c.parent=null;});
   S.people=S.people.filter(x=>x.id!==id);
-  toast(p.role==='MR'?`Removed ${p.name}. Their bricks are back in the pool.`:`Removed ${p.name}. Their team is now unattached.`);
+  toast(p.role==='MR'?`Removed ${p.name}. Their bricks are back in the unassigned list.`:`Removed ${p.name}. Their team is now unattached.`);
   render();
 }
 
-// ---------- events ----------
+// ---------- brick menu ----------
 const menu=$('#menu'), tip=$('#tip'); let menuCtx=null;
 function closeMenu(){menu.hidden=true;menuCtx=null;}
-function repLine(p,m){ const d=P(p.parent); return {p,d,share:m[p.id].share}; }
 function openMenu(chip){
   tip.hidden=true;
-  const ids=chip.dataset.ids.split(',').map(Number); const from=chip.dataset.from||null;
-  const name=S.mode==='70'?BY[ids[0]].p:BY[ids[0]].n;
-  const share=ids.reduce((a,i)=>a+BY[i].s,0);
+  const ids=chip.dataset.ids.split(','); const from=chip.dataset.from||null;
+  const us=ids.map(i=>UM[i]).filter(Boolean); if(!us.length) return;
+  const share=us.reduce((a,u)=>a+u.s,0);
+  const title=S.mode==='70'?us[0].p:(us[0].area?`${us[0].n} · ${us[0].area}`:us[0].n);
   menuCtx={ids,from};
-  const m=compute(); const reps=S.people.filter(p=>p.role==='MR').map(p=>repLine(p,m));
-  const repBtns=reps.map(r=>`<button class="rep" data-to="${r.p.id}" ${r.p.id===from?'disabled':''}><span>${esc(r.p.name)} <small>${r.d?'· '+esc(r.d.name):'· no DM yet'}</small></span><span class="num">${f2(r.share)}% → ${f2(r.share+(r.p.id===from?0:share))}%</span></button>`).join('');
-  menu.innerHTML=`<div class="mh"><b>${esc(name)}</b><span class="sub"><span class="num">${f2(share)}%</span> geo share${S.mode==='70'?` · ${ids.length} of ${KIDS[name].length} sub-bricks`:` · part of ${esc(BY[ids[0]].p)}`} · ${from?'assigned to <b style="font-size:13px">'+esc(P(from).name)+'</b>':'unassigned'}</span></div>
+  const m=compute(); const reps=S.people.filter(p=>p.role==='MR');
+  const repBtns=reps.map(r=>{const d=P(r.parent); const cur=m[r.id].share; return `<button class="rep" data-to="${r.id}" ${r.id===from?'disabled':''}><span>${esc(r.name)} <small>${d?'· '+esc(d.name):'· no DM yet'}</small></span><span class="num">${f2(cur)}% → ${f2(cur+(r.id===from?0:share))}%</span></button>`;}).join('');
+  const bids=[...new Set(us.map(u=>u.bid))];
+  const bricks=bids.map(bid=>{ const b=BY[bid], sp=S.splits[bid]; const mine=us.filter(u=>u.bid===bid);
+    const body=sp? mine.map(u=>`<div>${esc(u.area)} <span class="num" style="font-size:11px">${f2(u.pct)}% · ${f2(u.s)}</span></div>`).join('') : `<div>${esc(b.ar)}</div>`;
+    return `<div class="brick"><div class="top"><b>${esc(b.n)}</b><span class="num sub" style="margin:0">${f2(shareOf(bid))}%</span>${sp?`<span class="pill area">${sp.length} areas</span>`:''}<span class="spacer"></span><button class="splitbtn" data-split="${bid}">${sp?'Edit areas':'Split into areas'}</button></div><div class="ar-list">${body}</div></div>`; }).join('');
+  menu.innerHTML=`<div class="mh"><b>${esc(title)}</b><span class="sub"><span class="num">${f2(share)}%</span> geo share · ${from?'assigned to <b style="font-size:13px">'+esc(P(from).name)+'</b>':'unassigned'}</span></div>
    <div class="mb">
-     <div><div class="lbl" style="margin-bottom:4px">Areas in this brick</div><div class="areas ar-list">${areasHTML(ids,S.mode==='70'||ids.length>1)}</div></div>
+     <div class="lbl">${bids.length>1?'Sub-bricks and areas':'Areas in this brick'}</div>${bricks}
      <div class="lbl">${from?'Move to medical rep':'Assign to medical rep'}</div>
      ${reps.length>6?'<input type="search" id="repQ" placeholder="Find a rep or district manager">':''}
-     <div class="reps" id="repList">${repBtns||'<span class="empty">No medical reps yet.</span>'}</div>
+     <div class="reps">${repBtns||'<span class="empty">No medical reps yet.</span>'}</div>
      <button data-newrep="1"><span class="dot mr"></span>Add a new medical rep and assign</button>
    </div>
    <div class="mf">
@@ -528,14 +707,84 @@ function openMenu(chip){
   let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left)); let y=r.bottom+6; if(y+h>window.innerHeight-8) y=Math.max(8,r.top-h-6);
   menu.style.left=x+'px'; menu.style.top=y+'px';
   const q=$('#repQ'); if(q){ q.oninput=()=>{const v=q.value.toLowerCase(); menu.querySelectorAll('.rep').forEach(b=>b.hidden=!b.textContent.toLowerCase().includes(v));}; q.focus(); }
-  else { const first=menu.querySelector('.rep:not([disabled]),[data-newrep]'); if(first) first.focus(); }
 }
+
+// ---------- split editor ----------
+let SP=null; // {bid, rows:[{n,p}]}
+const r2=v=>Math.round(v*100)/100;
+function evenRows(names){ const n=names.length; const each=r2(100/n); return names.map((nm,i)=>({n:nm,p:i===n-1?r2(100-each*(n-1)):each})); }
+function openSplit(bid){
+  closeMenu(); bid=+bid; const b=BY[bid]; const ex=S.splits[bid];
+  let names=areasList(bid); if(names.length<2) names=names.concat(['']).slice(0,Math.max(2,names.length));
+  SP={bid,existed:!!ex,rows:ex?ex.map(a=>({n:a.n,p:+a.p})):evenRows(names)};
+  $('#spTitle').textContent=b.n; $('#spSub').textContent=`${b.p} · ${b.rg}`; $('#spShare').textContent=f2(shareOf(bid))+'%';
+  $('#spRemove').hidden=!ex; $('#mSplit').hidden=false; drawSplit();
+}
+function spSum(){ return r2(SP.rows.reduce((a,r)=>a+(+r.p||0),0)); }
+function drawSplit(){
+  const bs=shareOf(SP.bid);
+  $('#spRows').innerHTML=SP.rows.map((r,i)=>`<div class="sp-row" data-i="${i}">
+      <span class="sw" style="background:${AREA_COLORS[i%AREA_COLORS.length]}"></span>
+      <input type="text" value="${esc(r.n)}" data-f="n" placeholder="اسم المنطقة" aria-label="Area name">
+      <input type="range" min="0" max="100" step="0.5" value="${r.p}" data-f="r" aria-label="Part of brick">
+      <input type="number" min="0" max="100" step="0.01" value="${r.p}" data-f="p" aria-label="Percent of brick">
+      <span class="gs" data-gs>${f2(bs*(+r.p||0)/100)}%</span>
+      <button class="ghost" data-rm="${i}" title="Remove this area" ${SP.rows.length<=2?'disabled':''}>✕</button>
+    </div>`).join('');
+  drawSplitStatus();
+}
+function drawSplitStatus(){
+  const sum=spSum(), bs=shareOf(SP.bid), left=r2(100-sum);
+  $('#spBar').innerHTML=SP.rows.map((r,i)=>`<i style="width:${Math.max(0,Math.min(100,+r.p||0))}%;background:${AREA_COLORS[i%AREA_COLORS.length]}" title="${esc(r.n)} ${f2(r.p)}%"></i>`).join('');
+  const st=$('#spStat');
+  if(Math.abs(left)<0.005) st.innerHTML=`<span style="color:var(--good)">✓ <b>100%</b> allocated. Ready to save.</span>`;
+  else if(left>0) st.innerHTML=`<span style="color:var(--warn)">Allocated <b>${f2(sum)}%</b> · <b>${f2(left)}%</b> left to give</span>`;
+  else st.innerHTML=`<span style="color:var(--bad)">Allocated <b>${f2(sum)}%</b> · <b>${f2(-left)}%</b> over. Lower some areas.</span>`;
+  $('#spGs').textContent=`= ${f2(bs*sum/100)}% of ${f2(bs)}% geo share`;
+  const namesOk=SP.rows.every(r=>r.n.trim());
+  $('#spSave').disabled=!(Math.abs(left)<0.005&&namesOk&&SP.rows.length>=2);
+  $('#spSave').title=!namesOk?'Every area needs a name':'';
+}
+$('#spRows').addEventListener('input',e=>{
+  const row=e.target.closest('.sp-row'); if(!row) return; const i=+row.dataset.i, f=e.target.dataset.f;
+  if(f==='n'){ SP.rows[i].n=e.target.value; }
+  else { let v=parseFloat(e.target.value); if(isNaN(v)) v=0; v=Math.max(0,Math.min(100,v)); SP.rows[i].p=r2(v);
+    if(f==='r') row.querySelector('[data-f="p"]').value=SP.rows[i].p; else row.querySelector('[data-f="r"]').value=SP.rows[i].p;
+    row.querySelector('[data-gs]').textContent=f2(shareOf(SP.bid)*SP.rows[i].p/100)+'%'; }
+  drawSplitStatus();
+});
+$('#spRows').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b) return; SP.rows.splice(+b.dataset.rm,1); drawSplit(); });
+$('#spAdd').onclick=()=>{ SP.rows.push({n:'',p:0}); drawSplit(); const ins=$('#spRows').querySelectorAll('input[type=text]'); ins[ins.length-1].focus(); };
+$('#spEven').onclick=()=>{ SP.rows=evenRows(SP.rows.map(r=>r.n)); drawSplit(); };
+$('#spFill').onclick=()=>{ const n=SP.rows.length; const others=r2(SP.rows.slice(0,-1).reduce((a,r)=>a+(+r.p||0),0)); if(others>100){toast('The other areas already add up to more than 100%. Lower them first.');return;} SP.rows[n-1].p=r2(100-others); drawSplit(); };
+$('#spSave').onclick=()=>{
+  const bid=SP.bid, ex=S.splits[bid];
+  const prev=ex?ex.map((_,k)=>'b'+bid+'a'+k):['b'+bid];
+  const prevMr=prev.map(u=>S.assign[u]); prev.forEach(u=>delete S.assign[u]);
+  const same=prevMr.length&&prevMr.every(x=>x===prevMr[0])?prevMr[0]:undefined;
+  S.splits[bid]=SP.rows.map(r=>({n:r.n.trim(),p:r2(+r.p)}));
+  S.splits[bid].forEach((_,k)=>{ const mr=ex?(prevMr[k]!==undefined?prevMr[k]:same):same; if(mr) S.assign['b'+bid+'a'+k]=mr; });
+  $('#mSplit').hidden=true; render();
+  toast(`${BY[bid].n} is now ${SP.rows.length} areas. Click an area to give it to a rep.`);
+};
+$('#spRemove').onclick=e=>confirmBtn(e.target,'rmsplit',()=>{
+  const bid=SP.bid, ex=S.splits[bid]||[]; const mrs=ex.map((_,k)=>S.assign['b'+bid+'a'+k]);
+  ex.forEach((_,k)=>delete S.assign['b'+bid+'a'+k]); delete S.splits[bid];
+  const same=mrs.length&&mrs.every(x=>x&&x===mrs[0])?mrs[0]:null;
+  if(same) S.assign['b'+bid]=same;
+  $('#mSplit').hidden=true; render();
+  toast(same?`${BY[bid].n} is one brick again, still with ${P(same)?.name||'the same rep'}.`:`${BY[bid].n} is one brick again. Its areas were with different reps, so it went back to the unassigned list.`,4200);
+},'Remove split');
+
+// ---------- events ----------
 document.addEventListener('click',e=>{
+  const sp=e.target.closest('[data-split]'); if(sp){ e.preventDefault(); openSplit(sp.dataset.split); return; }
+  const cl=e.target.closest('[data-close]'); if(cl){ $('#'+cl.dataset.close).hidden=true; return; }
   if(!menu.hidden && menu.contains(e.target)){
     const b=e.target.closest('button'); if(!b||!menuCtx) return; const {ids}=menuCtx;
     if(b.dataset.to){ const p=P(b.dataset.to); closeMenu(); assign(ids,p.id); toast(`Assigned to ${p.name}.`); }
-    else if(b.dataset.newrep){ closeMenu(); addPerson('MR'); const p=S.people[S.people.length-1]; assign(ids,p.id); }
-    else if(b.dataset.unassign){ closeMenu(); assign(ids,null); toast('Brick returned to the unassigned list.'); }
+    else if(b.dataset.newrep){ closeMenu(); const p=addPerson('MR'); assign(ids,p.id); }
+    else if(b.dataset.unassign){ closeMenu(); assign(ids,null); toast('Returned to the unassigned list.'); }
     else if(b.dataset.msel){ const on=ids.every(i=>sel.has(i)); ids.forEach(i=>on?sel.delete(i):sel.add(i)); closeMenu(); render(); }
     else if(b.dataset.mclose){ closeMenu(); }
     return;
@@ -544,7 +793,7 @@ document.addEventListener('click',e=>{
   if(!menu.hidden && !(t&&t.classList.contains('chip'))) closeMenu();
   if(!t) return;
   if(t.classList.contains('chip')){
-    if(e.shiftKey||e.ctrlKey||e.metaKey){ closeMenu(); const ids=t.dataset.ids.split(',').map(Number); const on=ids.every(i=>sel.has(i)); ids.forEach(i=>on?sel.delete(i):sel.add(i)); t.classList.toggle('sel',!on); renderSel(); return; }
+    if(e.shiftKey||e.ctrlKey||e.metaKey){ closeMenu(); const ids=t.dataset.ids.split(','); const on=ids.every(i=>sel.has(i)); ids.forEach(i=>on?sel.delete(i):sel.add(i)); t.classList.toggle('sel',!on); renderSel(); return; }
     openMenu(t); return; }
   const d=t.dataset;
   if(d.place){ assign([...sel],d.place); return; }
@@ -552,52 +801,179 @@ document.addEventListener('click',e=>{
   if(d.addmr!==undefined){ addPerson('MR',d.addmr); return; }
   if(d.adddm!==undefined){ addPerson('DM',d.adddm); return; }
 });
-document.addEventListener('keydown',e=>{ const c=e.target.closest&&e.target.closest('.chip'); if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();c.click();} if(e.key==='Escape'){ if(!menu.hidden){closeMenu();return;} if(sel.size){sel.clear();render();} } });
+document.addEventListener('keydown',e=>{
+  const c=e.target.closest&&e.target.closest('.chip'); if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();c.click();}
+  if(e.key==='Escape'){ if(!menu.hidden){closeMenu();return;} const open=[...document.querySelectorAll('.modal')].find(x=>!x.hidden); if(open){open.hidden=true;return;} if(sel.size){sel.clear();render();} }
+});
 document.addEventListener('change',e=>{ const id=e.target.dataset&&e.target.dataset.rename; if(id){ const p=P(id); p.name=e.target.value.trim()||p.name; render(); } });
-$('#m70').onclick=()=>{S.mode='70';render();};
-$('#m148').onclick=()=>{S.mode='148';render();};
-$('#addRM').onclick=()=>addPerson('RM');
-$('#addDM').onclick=()=>addPerson('DM');
-$('#addMR').onclick=()=>addPerson('MR');
+const setMode=md=>{S.mode=md;dataMode=md;render();};
+$('#m70').onclick=()=>setMode('70'); $('#m148').onclick=()=>setMode('148');
+$('#d70').onclick=()=>setMode('70'); $('#d148').onclick=()=>setMode('148');
+$('#addRM').onclick=()=>addPerson('RM'); $('#addDM').onclick=()=>addPerson('DM'); $('#addMR').onclick=()=>addPerson('MR');
 $('#showAr').onchange=e=>{S.showAreas=e.target.checked;render();};
-$('#q').oninput=renderPool; $('#grp').onchange=renderPool; $('#srt').onchange=renderPool;
-$('#selUn').onclick=()=>assign([...sel],null);
-$('#selClr').onclick=()=>{sel.clear();render();};
-$('#tBoard').onclick=()=>{view='board';$('#tBoard').setAttribute('aria-selected',true);$('#tBal').setAttribute('aria-selected',false);$('#viewBoard').hidden=false;$('#viewBal').hidden=true;render();};
-$('#tBal').onclick=()=>{view='bal';$('#tBal').setAttribute('aria-selected',true);$('#tBoard').setAttribute('aria-selected',false);$('#viewBoard').hidden=true;$('#viewBal').hidden=false;render();};
-$('#copyTbl').onclick=()=>copy($('#balTbl').dataset.tsv,'Table copied. Paste it into Excel.');
-function copy(txt,msg){ const fb=()=>{const ta=$('#mText');openModal();ta.value=txt;ta.select();toast('Select all and copy the text in the box.');};
-  try{navigator.clipboard.writeText(txt).then(()=>toast(msg),fb);}catch(e){fb();} }
-
-// modal: save / load
-function openModal(){ $('#modal').hidden=false; $('#mText').value=JSON.stringify(S); $('#mSub').textContent='Copy this text and keep it (e.g. in a note or email) to reopen the structure later or share it with a colleague. To load one, paste it in the box or open a saved file. Your work also autosaves in this browser.'; }
-$('#btnMore').onclick=openModal;
-$('#mClose').onclick=()=>$('#modal').hidden=true;
-$('#mCopy').onclick=()=>{const ta=$('#mText');try{navigator.clipboard.writeText(ta.value).then(()=>toast('Structure copied.'),()=>{ta.select();toast('Press Ctrl/Cmd+C to copy.');});}catch(e){ta.select();}};
-function tryLoad(txt){ try{const s=JSON.parse(txt); if(!valid(s)) throw 0; S=Object.assign(blank(),s); sel.clear(); $('#modal').hidden=true; render(); toast('Structure loaded.'); }catch(e){ toast('That text is not a saved structure. Copy it again from “Save / load”.'); } }
-$('#mLoad').onclick=()=>tryLoad($('#mText').value);
-$('#mFile').onchange=e=>{const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>tryLoad(r.result); r.readAsText(f);};
+$('#q').oninput=renderPool; $('#grp').onchange=renderPool; $('#srt').onchange=renderPool; $('#dq').oninput=renderData;
+$('#selUn').onclick=()=>assign([...sel],null); $('#selClr').onclick=()=>{sel.clear();render();};
+function showView(v){ view=v; [['board','tBoard','viewBoard'],['bal','tBal','viewBal'],['data','tData','viewData']].forEach(([k,t,s])=>{$('#'+t).setAttribute('aria-selected',k===v);$('#'+s).hidden=k!==v;}); dataMode=S.mode; render(); }
+$('#tBoard').onclick=()=>showView('board'); $('#tBal').onclick=()=>showView('bal'); $('#tData').onclick=()=>showView('data');
+$('#copyTbl').onclick=()=>copyText($('#balTbl').dataset.tsv,'Table copied. Paste it into Excel.');
+function copyText(txt,msg){ try{navigator.clipboard.writeText(txt).then(()=>toast(msg),()=>toast('Copy was blocked by the browser. Select the text and copy it.'));}catch(e){toast('Copy was blocked by the browser.');} }
 let armed='';
 function confirmBtn(btn,key,fn,label){ if(armed!==key){armed=key;const o=btn.textContent;btn.textContent='Click again to confirm';setTimeout(()=>{if(armed===key){armed='';btn.textContent=o;}},2500);return;} armed='';btn.textContent=label;fn(); }
-$('#mBlank').onclick=e=>confirmBtn(e.target,'blank',()=>{S=blank();sel.clear();$('#modal').hidden=true;render();toast('Board cleared. Add a medical rep to start.');},'Clear board');
 
-// drag & drop
+// ---------- files ----------
+function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000); }
+const today=()=>new Date().toISOString().slice(0,10);
+function needXL(){ if(!window.ExcelJS){ toast('The Excel tool is still loading. Try again in a moment.'); return false; } return true; }
+const XC={ink:'FF14251F',rm:'FF6A4C93',rmBg:'FFEDE7F5',dm:'FF1D6FA5',dmBg:'FFE3EEF7',mr:'FF0F6B5C',head:'FF14251F',band:'FFF2F5F3',line:'FFCFD8D3',edit:'FFFFF4C2',area:'FFF6ECD9',good:'FFDCEFE2',warn:'FFF8ECD0',bad:'FFF6DCDC'};
+const thin={style:'thin',color:{argb:XC.line}}; const BORDER={top:thin,left:thin,bottom:thin,right:thin};
+function styleHeader(row){ row.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.head}};c.alignment={vertical:'middle',horizontal:'center',wrapText:true};c.border=BORDER;}); row.height=28; }
+async function logoId(wb){ try{ const r=await fetch('logo.png'); const buf=await r.arrayBuffer(); return wb.addImage({buffer:buf,extension:'png'}); }catch(e){ return null; } }
+async function titleBlock(ws,wb,img,title,subtitle,cols){
+  ws.mergeCells(1,2,1,cols); ws.mergeCells(2,2,2,cols); ws.mergeCells(3,2,3,cols);
+  const t=ws.getCell(1,2); t.value=title; t.font={bold:true,size:18,color:{argb:XC.ink}};
+  const s=ws.getCell(2,2); s.value=subtitle; s.font={size:11,color:{argb:'FF5B6B64'}};
+  const d=ws.getCell(3,2); d.value=`Territory Builder · Khaled Tolba · ${today()}`; d.font={size:9,italic:true,color:{argb:'FF5B6B64'}};
+  ws.getRow(1).height=28; ws.getRow(2).height=18; ws.getRow(3).height=16;
+  if(img!==null) ws.addImage(img,{tl:{col:0.1,row:0.1},ext:{width:58,height:58}});
+}
+$('#dlSheet').onclick=async()=>{
+  if(!needXL()) return; buildUnits();
+  const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder';
+  const custom=!!S.custom;
+  const w1=wb.addWorksheet('148 Bricks',{views:[{state:'frozen',ySplit:1}]});
+  w1.columns=[{header:'B#',width:7},{header:'IMS Region',width:15},{header:'70 Brick',width:22},{header:'148 Brick',width:30},{header:'% Geo Share',width:13},{header:'Areas',width:90}];
+  styleHeader(w1.getRow(1)); w1.getCell('E1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF8A6D1F'}}; w1.getCell('E1').note='Edit this column, then upload the file on the site.';
+  BASE.forEach(b=>{ const r=w1.addRow([b.id,b.rg,b.p,b.n,+shareOf(b.id).toFixed(6),b.ar]); r.eachCell(c=>c.border=BORDER);
+    r.getCell(5).numFmt='0.00'; r.getCell(5).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}};
+    r.getCell(6).alignment={horizontal:'right',readingOrder:'rtl',wrapText:true,vertical:'top'}; });
+  const tr=w1.addRow(['','','','TOTAL',{formula:`SUM(E2:E${BASE.length+1})`}]); tr.font={bold:true}; tr.getCell(5).numFmt='0.00';
+  w1.autoFilter='A1:F1';
+  const w2=wb.addWorksheet('70 Bricks',{views:[{state:'frozen',ySplit:1}]});
+  w2.columns=[{header:'#',width:6},{header:'IMS Region',width:15},{header:'70 Brick',width:22},{header:'# of 148 Bricks',width:14},{header:'% Geo Share',width:13},{header:'Areas (by 148 brick)',width:100}];
+  styleHeader(w2.getRow(1));
+  PARENTS.forEach((p,i)=>{ const ks=KIDS[p]; const n=i+2;
+    const r=w2.addRow([i+1,BY[ks[0]].rg,p,{formula:`COUNTIF('148 Bricks'!$C$2:$C$${BASE.length+1},C${n})`},{formula:`SUMIF('148 Bricks'!$C$2:$C$${BASE.length+1},C${n},'148 Bricks'!$E$2:$E$${BASE.length+1})`},ks.map(k=>`${BY[k].n}: ${BY[k].ar}`).join('\n')]);
+    r.eachCell(c=>c.border=BORDER); r.getCell(5).numFmt='0.00'; r.getCell(6).alignment={horizontal:'right',readingOrder:'rtl',wrapText:true,vertical:'top'}; });
+  const t2=w2.addRow(['','','TOTAL',{formula:'SUM(D2:D71)'},{formula:'SUM(E2:E71)'}]); t2.font={bold:true}; t2.getCell(5).numFmt='0.00';
+  const w3=wb.addWorksheet('By Region'); w3.columns=[{header:'IMS Region',width:18},{header:'# of 70 Bricks',width:14},{header:'# of 148 Bricks',width:14},{header:'% Geo Share',width:13}]; styleHeader(w3.getRow(1));
+  REGIONS.forEach((rg,i)=>{const n=i+2; const r=w3.addRow([rg,{formula:`COUNTIF('70 Bricks'!$B$2:$B$71,A${n})`},{formula:`COUNTIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n})`},{formula:`SUMIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n},'148 Bricks'!$E$2:$E$${BASE.length+1})`}]); r.eachCell(c=>c.border=BORDER); r.getCell(4).numFmt='0.00';});
+  const w4=wb.addWorksheet('How to edit'); w4.getColumn(1).width=110;
+  ['How to use your own geo share','','1. Go to the “148 Bricks” tab.','2. Change the numbers in the yellow “% Geo Share” column. Keep the B# column and the row order as they are.','3. Save the file (keep it as .xlsx).','4. On the site, open “IMS bricks & geo share” and press “Upload edited sheet”.','','Your numbers apply only to your board in your browser. The standard IMS geo share on the site does not change.',custom?`This file uses your custom geo share from “${S.custom.name}”.`:'This file uses the standard IMS geo share.']
+    .forEach((t,i)=>{const c=w4.getCell(i+1,1); c.value=t; if(i===0) c.font={bold:true,size:14};});
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`IMS_Bricks_GeoShare_${today()}.xlsx`); toast('Brick sheet downloaded.');
+};
+$('#ulSheet').onclick=()=>$('#ulFile').click();
+let UP=null;
+$('#ulFile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return; if(!needXL()) return;
+  try{
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer());
+    const val=c=>{ let v=c&&c.value; if(v&&typeof v==='object'){ v=('result' in v)?v.result:(v.richText?v.richText.map(t=>t.text).join(''):v.text); } return v; };
+    let found=null;
+    const sheets=[wb.getWorksheet('148 Bricks'),...wb.worksheets].filter(Boolean);
+    for(const ws of sheets){ for(let r=1;r<=Math.min(10,ws.rowCount);r++){ const row=ws.getRow(r); let ci=null,gi=null;
+        row.eachCell((c,col)=>{const t=String(val(c)||'').trim().toLowerCase(); if(t==='b#'||t==='b #') ci=col; if(t.includes('geo')) gi=col;});
+        if(ci&&gi){found={ws,hr:r,ci,gi};break;} } if(found) break; }
+    if(!found){ toast('Could not find the “B#” and “% Geo Share” columns. Use the brick sheet downloaded from this site.',5000); return; }
+    const shares={}; let n=0;
+    for(let r=found.hr+1;r<=found.ws.rowCount;r++){ const row=found.ws.getRow(r); const id=parseInt(val(row.getCell(found.ci))); const v=parseFloat(val(row.getCell(found.gi)));
+      if(BY[id]&&!isNaN(v)&&v>=0){ shares[id]=v; n++; } }
+    if(!n){ toast('No geo share numbers were found in that file.',4000); return; }
+    let tot=Object.values(shares).reduce((a,b)=>a+b,0);
+    if(tot>0.9&&tot<1.1){ for(const k in shares) shares[k]*=100; tot*=100; }
+    const missing=BASE.filter(b=>shares[b.id]==null).length;
+    const changed=BASE.filter(b=>shares[b.id]!=null&&Math.abs(shares[b.id]-b.s0)>1e-4).length;
+    const full={}; BASE.forEach(b=>full[b.id]=shares[b.id]!=null?shares[b.id]:b.s0);
+    const ftot=Object.values(full).reduce((a,b)=>a+b,0);
+    UP={name:f.name,shares:full,tot:ftot};
+    $('#upInfo').innerHTML=`<p><b>${esc(f.name)}</b>: read ${n} of ${BASE.length} bricks, <b>${changed}</b> changed from the standard.${missing?` ${missing} bricks were missing, so they keep the standard geo share.`:''}</p>
+      <p>New total: <b class="num">${f2(ftot)}%</b>${Math.abs(ftot-100)>0.05?` <span style="color:var(--warn)">(not 100%)</span>. You can use it as it is, or scale every brick so the total is exactly 100%.`:'.'}</p>
+      <p class="sub">This changes geo share only on your board in this browser. The standard IMS geo share on the site stays the same.</p>`;
+    $('#upScale').hidden=Math.abs(ftot-100)<=0.05; $('#mUp').hidden=false;
+  }catch(err){ toast('That file could not be read. Make sure it is an .xlsx file.',4000); }
+};
+function applyUpload(scale){ const sh={...UP.shares}; if(scale){ for(const k in sh) sh[k]=sh[k]*100/UP.tot; } S.custom={name:UP.name,at:today(),shares:sh}; $('#mUp').hidden=true; render(); toast('Your geo share is now in use on your board.'); }
+$('#upApply').onclick=()=>applyUpload(false); $('#upScale').onclick=()=>applyUpload(true);
+$('#customReset').onclick=e=>confirmBtn(e.target,'reset',()=>{S.custom=null;render();toast('Back to the standard IMS geo share.');},'Use standard geo share');
+
+// structure report
+$('#xExcel').onclick=async()=>{
+  if(!needXL()) return; buildUnits(); const m=compute(); const t=target(); const c=counts(); const AS=assignedShare(); const dmT=c.DM?AS/c.DM:0, rmT=c.RM?AS/c.RM:0;
+  const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder'; const img=await logoId(wb);
+  // Summary
+  const ws=wb.addWorksheet('Structure',{views:[{state:'frozen',ySplit:5,showGridLines:false}]});
+  ws.columns=[{width:10},{width:30},{width:26},{width:8},{width:9},{width:13},{width:11},{width:70}];
+  await titleBlock(ws,wb,img,'Field force structure',`${c.RM} regional · ${c.DM} district · ${c.MR} reps · ${f2(AS)}% of ${f2(totalShare())}% geo share assigned · target ${t?f2(t):'—'}% per rep${S.custom?' · custom geo share: '+S.custom.name:''}`,8);
+  const hr=ws.getRow(5); hr.values=['Level','Name','Reports to','Reps','Bricks','Geo share %','vs target','Bricks & areas']; styleHeader(hr);
+  const addR=(vals,kind,tt)=>{ const r=ws.addRow(vals); r.eachCell({includeEmpty:true},(cc,col)=>{cc.border=BORDER; if(col<=8) cc.alignment={vertical:'top',wrapText:col===8};});
+    r.getCell(6).numFmt='0.00';
+    if(kind==='RM'){ r.eachCell({includeEmpty:true},cc=>cc.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.rmBg}}); r.font={bold:true,color:{argb:XC.rm}}; }
+    if(kind==='DM'){ r.eachCell({includeEmpty:true},cc=>cc.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.dmBg}}); r.font={bold:true,color:{argb:XC.dm}}; }
+    if(kind==='MR'){ r.getCell(1).font={bold:true,color:{argb:XC.mr}}; }
+    const d=dev(vals[5],tt); if(d!==null){ const a=Math.abs(d); r.getCell(7).value=d/100; r.getCell(7).numFmt='+0%;-0%;0%'; r.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:a<=15?XC.good:a<=35?XC.warn:XC.bad}}; }
+    return r; };
+  const mrLine=(p,dn)=>{const x=m[p.id]; addR(['MR',p.name,dn,'',x.bricks.size,+f2(x.share),'',bricksText(p.id)],'MR',t);};
+  const dmLine=(d,rn)=>{const x=m[d.id]; addR(['DM',d.name,rn,x.mrs,'',+f2(x.share),''],'DM',dmT); kids(d.id,'MR').forEach(p=>mrLine(p,d.name));};
+  S.people.filter(p=>p.role==='RM').forEach(r=>{const x=m[r.id]; addR(['RM',r.name,'',x.mrs,'',+f2(x.share),''],'RM',rmT); kids(r.id,'DM').forEach(d=>dmLine(d,r.name));});
+  loose('DM').forEach(d=>dmLine(d,'—')); loose('MR').forEach(p=>mrLine(p,'—'));
+  // Rep territories
+  const w2=wb.addWorksheet('Rep territories',{views:[{state:'frozen',ySplit:1}]});
+  w2.columns=[{header:'Medical rep',width:24},{header:'District manager',width:22},{header:'Regional manager',width:22},{header:'IMS Region',width:14},{header:'70 Brick',width:20},{header:'148 Brick',width:26},{header:'Area (if split)',width:22},{header:'% of brick',width:10},{header:'Geo share %',width:12},{header:'Areas inside',width:70}];
+  styleHeader(w2.getRow(1)); let band=false;
+  S.people.filter(p=>p.role==='MR').forEach(p=>{ const d=P(p.parent), r=d&&P(d.parent); band=!band;
+    unitsOf(p.id).forEach(id=>{ const u=UM[id]; const row=w2.addRow([p.name,d?d.name:'',r?r.name:'',u.rg,u.p,u.n,u.area||'',u.area?u.pct/100:'',+u.s.toFixed(4),u.area?'':BY[u.bid].ar]);
+      row.eachCell({includeEmpty:true},cc=>{cc.border=BORDER; if(band) cc.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.band}};});
+      row.getCell(8).numFmt='0.0%'; row.getCell(9).numFmt='0.00'; row.getCell(7).alignment={horizontal:'right',readingOrder:'rtl'}; row.getCell(10).alignment={horizontal:'right',readingOrder:'rtl',wrapText:true};
+      if(u.area) row.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.area}}; });
+    const sr=w2.addRow([`${p.name} total`,'','','','','','','',+f2(m[p.id].share)]); sr.font={bold:true}; sr.getCell(9).numFmt='0.00'; sr.eachCell({includeEmpty:true},cc=>cc.border=BORDER);
+  });
+  w2.autoFilter='A1:J1';
+  // Unassigned
+  const w3=wb.addWorksheet('Unassigned',{views:[{state:'frozen',ySplit:1}]});
+  w3.columns=[{header:'IMS Region',width:14},{header:'70 Brick',width:20},{header:'148 Brick',width:26},{header:'Area (if split)',width:22},{header:'Geo share %',width:12},{header:'Areas inside',width:70}]; styleHeader(w3.getRow(1));
+  UNITS.filter(u=>!S.assign[u.id]).forEach(u=>{const row=w3.addRow([u.rg,u.p,u.n,u.area||'',+u.s.toFixed(4),u.area?'':BY[u.bid].ar]); row.eachCell({includeEmpty:true},cc=>cc.border=BORDER); row.getCell(5).numFmt='0.00'; row.getCell(6).alignment={horizontal:'right',readingOrder:'rtl',wrapText:true};});
+  const ut=w3.addRow(['','','TOTAL','',{formula:`SUM(E2:E${w3.rowCount})`}]); ut.font={bold:true}; ut.getCell(5).numFmt='0.00';
+  // Area splits
+  const keys=Object.keys(S.splits);
+  if(keys.length){ const w4=wb.addWorksheet('Area splits'); w4.columns=[{header:'148 Brick',width:26},{header:'70 Brick',width:20},{header:'Brick geo share %',width:16},{header:'Area',width:26},{header:'% of brick',width:11},{header:'Area geo share %',width:16},{header:'Medical rep',width:24}]; styleHeader(w4.getRow(1));
+    keys.forEach(bid=>S.splits[bid].forEach((a,k)=>{const mr=P(S.assign['b'+bid+'a'+k]); const row=w4.addRow([BY[bid].n,BY[bid].p,+f2(shareOf(+bid)),a.n,a.p/100,+(shareOf(+bid)*a.p/100).toFixed(4),mr?mr.name:'Unassigned']); row.eachCell({includeEmpty:true},cc=>cc.border=BORDER); row.getCell(3).numFmt='0.00';row.getCell(5).numFmt='0.0%';row.getCell(6).numFmt='0.00'; row.getCell(4).alignment={horizontal:'right',readingOrder:'rtl'};})); }
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Territory_Structure_${today()}.xlsx`); toast('Structure report downloaded.');
+};
+$('#btnSave').onclick=()=>{ $('#linkBox').hidden=true; $('#mSave').hidden=false; };
+$('#xFile').onclick=()=>{ download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`Territory_Structure_${today()}.json`); toast('Structure file saved to your device.'); };
+$('#xOpen').onclick=()=>$('#openFile').click();
+$('#openFile').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const s=JSON.parse(r.result); if(!valid(s)) throw 0; S=normalize(s); sel.clear(); $('#mSave').hidden=true; render(); toast('Structure opened.'); }catch(_){ toast('That file is not a saved structure.',4000); } }; r.readAsText(f); };
+$('#xLink').onclick=()=>{
+  const code=LZString.compressToEncodedURIComponent(JSON.stringify(S));
+  const url=location.origin+location.pathname+'#s='+code;
+  const box=$('#linkBox'); box.value=url; box.hidden=false; box.select();
+  copyText(url,'Share link copied. Anyone who opens it sees this structure.');
+};
+$('#xClear').onclick=e=>confirmBtn(e.target,'clear',()=>{S=blank();sel.clear();$('#mSave').hidden=true;render();toast('Board cleared. Add a medical rep to start.');},'Clear board');
+
+// shared link on load
+function readHash(){
+  const m=location.hash.match(/^#s=(.+)$/); if(!m) return false;
+  try{ const s=JSON.parse(LZString.decompressFromEncodedURIComponent(m[1])); if(!valid(s)) throw 0; S=normalize(s); sharedView=true; return true; }
+  catch(e){ toast('That share link is broken or incomplete.',4000); return false; }
+}
+const clearHash=()=>history.replaceState(null,'',location.pathname+location.search);
+$('#keepShared').onclick=()=>{ sharedView=false; save(); clearHash(); render(); toast('This structure is now your board.'); };
+$('#leaveShared').onclick=()=>{ sharedView=false; clearHash(); S=load(); render(); toast('Back to your own board.'); };
+
+// ---------- drag & drop ----------
 let drag=null;
 document.addEventListener('dragstart',e=>{ closeMenu();
-  const ch=e.target.closest&&e.target.closest('.chip');
-  const hp=e.target.dataset&&e.target.dataset.dragPerson;
-  if(ch){ let ids=ch.dataset.ids.split(',').map(Number);
-    if(ids.every(i=>sel.has(i))) ids=[...sel];
-    drag={kind:'brick',ids}; ch.classList.add('dragging'); }
-  else if(hp){ drag={kind:'person',id:hp,role:P(hp).role}; }
-  else return;
+  const ch=e.target.closest&&e.target.closest('.chip'); const hp=e.target.dataset&&e.target.dataset.dragPerson;
+  if(ch){ let ids=ch.dataset.ids.split(','); if(ids.every(i=>sel.has(i))) ids=[...sel]; drag={kind:'brick',ids}; ch.classList.add('dragging'); }
+  else if(hp){ drag={kind:'person',id:hp,role:P(hp).role}; } else return;
   e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain','x');}catch(_){}
   if(hp){const card=e.target.closest('[data-person]'); if(card) e.dataTransfer.setDragImage(card,20,20);}
 });
 document.addEventListener('dragend',()=>{drag=null;document.querySelectorAll('.dragging,.drop-ok').forEach(x=>x.classList.remove('dragging','drop-ok'));});
 function dropTarget(el){
   if(!drag) return null;
-  if(drag.kind==='brick'){ const z=el.closest('[data-zone]'); if(z) return z; const mr=el.closest('.mr'); if(mr) return mr.querySelector('[data-zone]'); const pool=el.closest('#pool'); if(pool) return pool; return null; }
+  if(drag.kind==='brick'){ const z=el.closest('[data-zone]'); if(z) return z; const mr=el.closest('.mr'); if(mr) return mr.querySelector('[data-zone]'); return el.closest('#pool'); }
   if(drag.role==='MR'){ const z=el.closest('[data-mrs]'); if(z) return z; const dm=el.closest('.dm'); return dm?dm.querySelector('[data-mrs]'):null; }
   if(drag.role==='DM'){ const z=el.closest('[data-dms]'); if(z) return z; const rm=el.closest('.rm'); return rm?rm.querySelector('[data-dms]'):null; }
   return null;
@@ -605,18 +981,18 @@ function dropTarget(el){
 document.addEventListener('dragover',e=>{ const t=dropTarget(e.target); document.querySelectorAll('.drop-ok').forEach(x=>{if(x!==t)x.classList.remove('drop-ok');}); if(t){e.preventDefault();t.classList.add('drop-ok');} });
 document.addEventListener('drop',e=>{
   const t=dropTarget(e.target); if(!t) return; e.preventDefault();
-  if(drag.kind==='brick'){ assign(drag.ids, t.id==='pool'?null:t.dataset.zone); }
+  if(drag.kind==='brick') assign(drag.ids, t.id==='pool'?null:t.dataset.zone);
   else { const p=P(drag.id); const to=drag.role==='MR'?t.dataset.mrs:t.dataset.dms; if(to===drag.id) return; p.parent=to||null; render(); }
   drag=null;
 });
 
-// tooltip with Arabic area list
+// ---------- tooltip ----------
 document.addEventListener('mouseover',e=>{
   const c=e.target.closest&&e.target.closest('.chip'); if(!c||!menu.hidden||S.showAreas){tip.hidden=true;return;}
   let h='';
-  if(c.dataset.tip){const b=BY[c.dataset.tip];h=`<b>${esc(b.n)}</b> · ${esc(b.p)} · <span class="num">${f2(b.s)}%</span><div class="ar">${esc(b.ar)}</div>`;}
-  else {const p=c.dataset.tipp; const ids=c.dataset.ids.split(',').map(Number);
-    h=`<b>${esc(p)}</b> · ${esc(BY[KIDS[p][0]].rg)}<div style="margin-top:4px">${KIDS[p].map(i=>`<div class="row" style="justify-content:space-between;gap:12px;${ids.includes(i)?'':'opacity:.45'}"><span>${esc(BY[i].n)}</span><span class="num">${f2(BY[i].s)}%</span></div>`).join('')}</div>`;}
+  if(c.dataset.tipu){ const u=UM[c.dataset.tipu]; if(!u) return; h=`<b>${esc(u.n)}</b>${u.area?' · '+esc(u.area):''} · <span class="num">${f2(u.s)}%</span><div class="ar">${esc(u.area?`${f2(u.pct)}% of ${u.n}`:BY[u.bid].ar)}</div>`; }
+  else { const p=c.dataset.tipp; const ids=new Set(c.dataset.ids.split(','));
+    h=`<b>${esc(p)}</b> · ${esc(BY[KIDS[p][0]].rg)}<div style="margin-top:4px">${UNITS.filter(u=>u.p===p).map(u=>`<div class="row" style="justify-content:space-between;gap:12px;${ids.has(u.id)?'':'opacity:.45'}"><span>${esc(u.n)}${u.area?' · '+esc(u.area):''}</span><span class="num">${f2(u.s)}%</span></div>`).join('')}</div>`; }
   tip.innerHTML=h; tip.hidden=false;
   const r=c.getBoundingClientRect(); const w=tip.offsetWidth, hh=tip.offsetHeight;
   let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left)); let y=r.bottom+6; if(y+hh>window.innerHeight-8) y=r.top-hh-6;
@@ -624,7 +1000,9 @@ document.addEventListener('mouseover',e=>{
 });
 document.addEventListener('scroll',e=>{tip.hidden=true; if(!menu.hidden&&!menu.contains(e.target)) closeMenu();},true);
 
-render();
+// ---------- start ----------
+S=load(); readHash(); dataMode=S.mode; render();
+window.addEventListener('hashchange',()=>{ if(readHash()) render(); });
 </script>
 </body>
 </html>
