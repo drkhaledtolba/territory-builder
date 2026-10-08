@@ -415,6 +415,7 @@ footer.foot img{width:84px;height:84px;display:block}
 
 
   <section id="viewTgt" hidden>
+    <div class="how" id="tgDemoBar" style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px"><span><b>New to target setting?</b> Load a demo to see a finished example: 3 products with prices and units, different weights per product, and sample potentiality and contribution data for every brick. The numbers are made up.</span><span class="spacer"></span><button id="tgDemo" class="primary">Load demo target</button></div>
     <div class="tg-grid">
       <div class="tg-card"><div class="tg-h"><span class="tg-step">1</span><h3>Who gets the target</h3><button class="help" data-help="tscope" aria-label="Help">?</button></div>
         <select id="tgScope" class="tg-select" aria-label="Target scope"></select>
@@ -1850,7 +1851,7 @@ const TOUR=[
   {sel:'.addbar',t:'2 · Add your team',x:'Add reps and managers one by one, build a full structure in one click, or import one you already have from Excel.',view:'board'},
   {sel:'#board',t:'3 · The board',x:'Drag bricks onto reps and reps onto district managers (or tap ⋮⋮ to move them). “View” shows everything a rep covers. The coloured % shows how far each rep is from the average.',view:'board'},
   {sel:'#stats',t:'4 · Live numbers',x:'Totals update as you work: people, geo share assigned and how balanced the reps are.'},
-  {sel:'.tabs',t:'5 · More tools',x:'“IMS bricks & geo share” lists every brick and lets you use your own geo share. “Target setting” splits a sales target down to every rep.'},
+  {sel:'.tabs',t:'5 · More tools',x:'“IMS bricks & geo share” lists every brick and lets you use your own geo share. “Target setting” splits a sales target down to every rep, and has its own demo to show how.'},
   {sel:'.toolbar',t:'6 · Save and share',x:'Everything saves in this browser automatically, and Undo fixes mistakes. Use “Save, export & share” for an Excel report, a share link or a file.'},
   {sel:null,t:'You\'re ready',x:'Start from an empty board, or load a demo structure (3 regional managers, 9 district managers, 45 reps) to see a finished example.',end:true}
 ];
@@ -1895,6 +1896,31 @@ function loadDemo(){
   toast('Demo loaded: 3 RM · 9 DM · 45 reps filled by geography. Explore it, then use New board to start your own. Undo brings back your previous board.',6000);
 }
 
+// ---------- target demo ----------
+function loadTgtDemo(){
+  const t=T(); const busy=num(t.total)>0||t.products.some(p=>num(p.price)*num(p.units)>0);
+  if(busy && armed!=='tdemo'){ armed='tdemo'; toast('This replaces your current target settings. Click “Load demo target” again to confirm. Undo brings them back.',4000); setTimeout(()=>{if(armed==='tdemo')armed='';},4000); return; }
+  armed='';
+  let built=false;
+  if(!S.people.some(p=>p.role==='MR'&&unitsOf(p.id).length)){
+    $('#bRM').value=3; $('#bDM').value=9; $('#bMR').value=45; document.querySelector('input[name="bmode"][value="geo"]').checked=true; $('#bLevel').value='70';
+    buildUnits(); buildStructure(); built=true; showView('tgt');
+  }
+  // made-up but realistic territory data: geo share with a fixed, repeatable twist per brick
+  buildUnits(); let seed=7; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  const mk=(spread)=>{ const raw={}; PARENTS.forEach(pp=>{ raw[pp]=brickGeo(pp)*(1-spread+2*spread*rnd()); }); const sum=Object.values(raw).reduce((a,v)=>a+v,0)||1; const out={}; PARENTS.forEach(pp=>out[pp]=(raw[pp]/sum*100).toFixed(2)); return out; };
+  S.tgt={scope:'all',mode:'products',total:'',sameW:false,w:{g:100,p:0,c:0},data:{},
+    products:[
+      {id:'pd1',n:'Demo product A (tablets)',price:'85',units:'400000',w:{g:50,p:30,c:20}},
+      {id:'pd2',n:'Demo product B (syrup)',price:'60',units:'250000',w:{g:60,p:40,c:0}},
+      {id:'pd3',n:'Demo product C (new launch)',price:'120',units:'80000',w:{g:100,p:0,c:0}}
+    ]};
+  S.tgt.data.pd1={pot:mk(.45),con:mk(.6)}; S.tgt.data.pd2={pot:mk(.35)};
+  renderTgt(); render();
+  toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(85*400000+60*250000+120*80000)} EGP. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
+}
+$('#tgDemo').onclick=loadTgtDemo;
+
 // ---------- new board ----------
 $('#btnNew').onclick=e=>confirmBtn(e.target,'new',()=>{ const had=S.people.length; S=blank(); sel.clear(); if(view!=='board') showView('board'); else render(); toast(had?'New board started. Changed your mind? Press Undo.':'New board ready.',4000); },'New board');
 $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
@@ -1916,7 +1942,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form and a downloadable Excel formulas learning guide']],
+  ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form and a downloadable Excel formulas learning guide']],
   ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
 ];
 $('#fNew').onclick=()=>{ $('#wnBody').innerHTML=NEWS.map(([d,l])=>`<h4>${esc(d)}</h4><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join(''); $('#mNew').hidden=false; $('#newDot').hidden=true; try{localStorage.setItem('tb-news',NEWS_V);}catch(e){} };
