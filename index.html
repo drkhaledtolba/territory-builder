@@ -824,6 +824,7 @@ function confirmBtn(btn,key,fn,label){ if(armed!==key){armed=key;const o=btn.tex
 function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000); }
 const today=()=>new Date().toISOString().slice(0,10);
 function needXL(){ if(!window.ExcelJS){ toast('The Excel tool is still loading. Try again in a moment.'); return false; } return true; }
+const SITE_URL='https://drkhaledtolba.github.io/territory-builder/';
 const XC={ink:'FF14251F',rm:'FF6A4C93',rmBg:'FFEDE7F5',dm:'FF1D6FA5',dmBg:'FFE3EEF7',mr:'FF0F6B5C',head:'FF14251F',band:'FFF2F5F3',line:'FFCFD8D3',edit:'FFFFF4C2',area:'FFF6ECD9',good:'FFDCEFE2',warn:'FFF8ECD0',bad:'FFF6DCDC'};
 const thin={style:'thin',color:{argb:XC.line}}; const BORDER={top:thin,left:thin,bottom:thin,right:thin};
 function styleHeader(row){ row.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.head}};c.alignment={vertical:'middle',horizontal:'center',wrapText:true};c.border=BORDER;}); row.height=28; }
@@ -857,9 +858,14 @@ $('#dlSheet').onclick=async()=>{
   const t2=w2.addRow(['','','TOTAL',{formula:'SUM(D2:D71)'},{formula:'SUM(E2:E71)'}]); t2.font={bold:true}; t2.getCell(5).numFmt='0.00';
   const w3=wb.addWorksheet('By Region'); w3.columns=[{header:'IMS Region',width:18},{header:'# of 70 Bricks',width:14},{header:'# of 148 Bricks',width:14},{header:'% Geo Share',width:13}]; styleHeader(w3.getRow(1));
   REGIONS.forEach((rg,i)=>{const n=i+2; const r=w3.addRow([rg,{formula:`COUNTIF('70 Bricks'!$B$2:$B$71,A${n})`},{formula:`COUNTIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n})`},{formula:`SUMIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n},'148 Bricks'!$E$2:$E$${BASE.length+1})`}]); r.eachCell(c=>c.border=BORDER); r.getCell(4).numFmt='0.00';});
-  const w4=wb.addWorksheet('How to edit'); w4.getColumn(1).width=110;
-  ['How to use your own geo share','','1. Go to the “148 Bricks” tab.','2. Change the numbers in the yellow “% Geo Share” column. Keep the B# column and the row order as they are.','3. Save the file (keep it as .xlsx).','4. On the site, open “IMS bricks & geo share” and press “Upload edited sheet”.','','Your numbers apply only to your board in your browser. The standard IMS geo share on the site does not change.',custom?`This file uses your custom geo share from “${S.custom.name}”.`:'This file uses the standard IMS geo share.']
-    .forEach((t,i)=>{const c=w4.getCell(i+1,1); c.value=t; if(i===0) c.font={bold:true,size:14};});
+  const w4=wb.addWorksheet('How to edit',{views:[{showGridLines:false}]}); w4.getColumn(1).width=16; w4.getColumn(2).width=105;
+  const img=await logoId(wb); if(img!==null) w4.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}});
+  [26,20,20,12].forEach((h,i)=>w4.getRow(i+1).height=h);
+  w4.getCell('B1').value='How to use your own geo share'; w4.getCell('B1').font={bold:true,size:16,color:{argb:XC.ink}};
+  w4.getCell('B2').value='Territory Builder · Khaled Tolba'; w4.getCell('B2').font={size:11,color:{argb:'FF5B6B64'}};
+  w4.getCell('B3').value={text:SITE_URL,hyperlink:SITE_URL}; w4.getCell('B3').font={size:11,underline:true,color:{argb:'FF0F6B5C'}};
+  ['1. Go to the “148 Bricks” tab.','2. Change the numbers in the yellow “% Geo Share” column. Keep the B# column and the row order as they are.','3. Save the file (keep it as .xlsx).',`4. Open the site (${SITE_URL}), go to “IMS bricks & geo share” and press “Upload edited sheet”.`,'','Your numbers apply only to your board in your browser. The standard IMS geo share on the site does not change.',custom?`This file uses your custom geo share from “${S.custom.name}”.`:'This file uses the standard IMS geo share.']
+    .forEach((t,i)=>{const c=w4.getCell(i+6,2); c.value=t; c.alignment={wrapText:true,vertical:'top'};});
   const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`IMS_Bricks_GeoShare_${today()}.xlsx`); toast('Brick sheet downloaded.');
 };
 $('#ulSheet').onclick=()=>$('#ulFile').click();
