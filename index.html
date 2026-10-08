@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Territory Builder</title>
+<title>Territory Builder · field-force planner on IMS bricks</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Territory Builder">
+<meta property="og:title" content="Territory Builder · free field-force planner on IMS bricks">
+<meta property="og:description" content="Build a sales structure on Egypt's IMS bricks: assign bricks to medical reps, reps to district and regional managers, balance geo share and set targets. Free, runs in your browser.">
+<meta property="og:url" content="https://drkhaledtolba.github.io/territory-builder/">
+<meta property="og:image" content="https://drkhaledtolba.github.io/territory-builder/og-image.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://drkhaledtolba.github.io/territory-builder/og-image.png">
+<meta name="theme-color" content="#0f6b5c">
+<link rel="icon" type="image/png" href="logo.png">
 <meta name="description" content="Drag-and-drop field force planner on IMS bricks: assign bricks and areas to medical reps, reps to district managers, district managers to regional managers, and balance geo share.">
 <link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -284,6 +295,49 @@ tfoot td{background:var(--sunk);position:sticky;bottom:0}
 footer.foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:24px 90px;color:var(--muted);font-size:12px}
 footer.foot img{width:84px;height:84px;display:block}
 @media (prefers-reduced-motion:no-preference){.chip,.mr,.dm{transition:border-color .12s,background .12s}}
+
+/* header status, help, tour, feedback */
+.saved{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.saved i{width:7px;height:7px;border-radius:50%;background:var(--good);display:inline-block}
+.saved.off i{background:var(--warn)}
+.help{width:18px;height:18px;padding:0;border-radius:50%;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);border-color:var(--accent);background:var(--panel);line-height:1;flex:none;vertical-align:middle;text-transform:none;letter-spacing:0}
+.help:hover{background:var(--accent);color:var(--panel)}
+.helppop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-width:min(320px,calc(100vw - 16px));box-shadow:0 10px 32px rgba(0,0,0,.22);font-size:13px;line-height:1.45}
+.helppop b{display:block;margin-bottom:3px}
+.tour-hole{position:fixed;z-index:70;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,20,16,.55);outline:2px solid var(--sel);pointer-events:none;transition:all .2s}
+.tour-card{position:fixed;z-index:71;background:var(--panel);border-radius:12px;padding:14px 16px;width:min(360px,calc(100vw - 24px));box-shadow:0 14px 40px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:8px}
+.tour-card h4{margin:0;font-family:var(--f-display);font-size:17px}
+.tour-card p{margin:0;font-size:13px;line-height:1.5;color:var(--ink)}
+.tour-card .row{justify-content:space-between}
+@media (max-width:600px){.tour-card{left:12px!important;right:12px;top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}}
+.foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px}
+.foot-links a,.foot-links button{color:var(--accent);font-weight:600;font-size:12px;text-decoration:underline;text-underline-offset:2px;background:transparent;border:0;padding:0}
+.foot .privacy{max-width:560px;text-align:center}
+.newdot{width:7px;height:7px;border-radius:50%;background:var(--bad);display:inline-block}
+.wn h4{margin:10px 0 4px;font-size:13px}.wn ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5}
+.fb textarea,.fb input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.fb textarea{min-height:120px;resize:vertical}
+.found{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.found .row{gap:8px;font-size:12px;justify-content:space-between;border:1px solid var(--line);border-radius:7px;padding:5px 8px;background:var(--bg)}
+.handle{cursor:pointer}
+/* phones */
+@media (max-width:640px){
+  h1{font-size:22px}
+  header.top{align-items:flex-start}
+  .toolbar{width:100%}
+  .toolbar .saved{flex-basis:100%}
+  .toolbar button{flex:1 1 auto;justify-content:center}
+  .toolbar #btnSave{flex:1;justify-content:center}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat .v{font-size:17px}
+  .addbar{gap:6px}
+  .addbar .spacer{display:none}
+  .addbar button{flex:1 1 auto;justify-content:center}
+  .modal .box{max-height:calc(100dvh - 16px)}
+  .legend .desk{display:none}
+}
+@media (hover:none){ .legend .desk{display:none} }
+@media (hover:hover){ .legend .touch{display:none} }
 </style>
 </head>
 <body>
@@ -295,6 +349,11 @@ footer.foot img{width:84px;height:84px;display:block}
       <div class="sub">Assign IMS bricks, or single areas inside a brick, to medical reps. Group reps under district managers and district managers under regional managers. Geo share adds up at every level.</div>
     </div>
     <div class="toolbar">
+      <span class="saved" id="savedTxt" aria-live="polite"><i></i><span>Saved in this browser</span></span>
+      <button id="btnUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
+      <button id="btnRedo" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷ Redo</button>
+      <button id="btnNew" title="Start a new, empty board">New board</button>
+      <button id="btnTour" title="A quick tour of the site">Tour</button>
       <button id="btnSave" class="primary">Save, export & share</button>
     </div>
   </header>
@@ -323,26 +382,26 @@ footer.foot img{width:84px;height:84px;display:block}
     <aside class="pool" id="pool" aria-label="Unassigned bricks">
       <div class="pool-head">
         <div class="pool-level">
-          <span class="lbl">Brick level</span>
+          <span class="lbl">Brick level</span><button class="help" data-help="level" aria-label="What is brick level?">?</button>
           <div class="seg" role="group" aria-label="Brick level">
             <button id="m70" aria-pressed="true">70 bricks</button>
             <button id="m148" aria-pressed="false">148 bricks</button>
           </div>
           <label class="switch" title="Show the areas inside every brick"><input type="checkbox" id="showAr"> Show areas</label>
         </div>
-        <h2>Unassigned bricks <span class="num" id="poolShare" style="font-size:13px;color:var(--muted)"></span></h2>
+        <h2>Unassigned bricks <button class="help" data-help="geo" aria-label="What is geo share?">?</button> <span class="num" id="poolShare" style="font-size:13px;color:var(--muted)"></span></h2>
         <input type="search" id="q" placeholder="Search brick or area (English / عربي)">
         <div class="row" style="gap:6px;flex-wrap:nowrap">
           <select id="srt" aria-label="Sort bricks"><option value="ims">IMS brick order</option><option value="share">Geo share, high to low</option><option value="az">Name A–Z</option></select>
           <select id="grp" aria-label="Group bricks"><option value="rg" selected>Group by IMS region</option><option value="">No grouping</option></select>
         </div>
-        <div class="legend">Click a brick to assign it or split it into areas. Drag it onto a rep. Shift-click to pick several. Drop here to unassign.</div>
+        <div class="legend"><span class="desk">Click a brick to assign it or split it into areas. Drag it onto a rep. Shift-click to pick several. Drop here to unassign.</span><span class="touch">Tap a brick to give it to a rep or split it into areas. Tap ⋮⋮ on a rep to move it to another district manager.</span></div>
       </div>
       <div class="pool-body" id="poolBody"></div>
     </aside>
     <section class="right">
       <div class="addbar">
-        <span class="lbl">Add to structure</span>
+        <span class="lbl">Add to structure</span><button class="help" data-help="add" aria-label="How to add people">?</button>
         <button id="addMR" class="primary">+ Medical rep</button>
         <button id="addDM"><span class="dot dm"></span>+ District manager</button>
         <button id="addRM"><span class="dot rm"></span>+ Regional manager</button>
@@ -357,7 +416,7 @@ footer.foot img{width:84px;height:84px;display:block}
 
   <section id="viewTgt" hidden>
     <div class="tg-grid">
-      <div class="tg-card"><div class="tg-h"><span class="tg-step">1</span><h3>Who gets the target</h3></div>
+      <div class="tg-card"><div class="tg-h"><span class="tg-step">1</span><h3>Who gets the target</h3><button class="help" data-help="tscope" aria-label="Help">?</button></div>
         <select id="tgScope" class="tg-select" aria-label="Target scope"></select>
         <div class="sub" id="tgScopeInfo"></div></div>
       <div class="tg-card"><div class="tg-h"><span class="tg-step">2</span><h3>Target</h3></div>
@@ -371,15 +430,15 @@ footer.foot img{width:84px;height:84px;display:block}
           <button id="tgAddProd" style="align-self:flex-start">+ Add product</button>
         </div>
         <div class="tg-total"><span class="lbl">Total target</span><span class="num" id="tgGrand">0</span></div></div>
-      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">3</span><h3>Distribution factors</h3></div>
+      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">3</span><h3>Distribution factors</h3><button class="help" data-help="factors" aria-label="Help">?</button></div>
         <div class="how"><b>Geo share</b>: the territory's weight in the national market of all products (already in the site). <b>Potentiality</b>: how products similar to yours sell in the territory. <b>Contribution</b>: how your own product sold there, out of your company's national sales. Give each factor a weight; the weights must add up to 100%.</div>
         <label class="row" id="tgSameRow" style="gap:8px"><input type="checkbox" id="tgSame" style="accent-color:var(--accent)"> Use the same weights for all products</label>
         <div id="tgWeights" class="tg-ws"></div></div>
-      <div class="tg-card tg-wide" id="tgDataCard"><div class="tg-h"><span class="tg-step">4</span><h3>Territory data</h3></div>
+      <div class="tg-card tg-wide" id="tgDataCard"><div class="tg-h"><span class="tg-step">4</span><h3>Territory data</h3><button class="help" data-help="tdata" aria-label="Help">?</button></div>
         <div class="sub" id="tgDataNote"></div>
         <div class="row" id="tgDataBtns"><button id="tgTpl">Download data template (Excel)</button><button id="tgUp">Upload filled data</button><input type="file" id="tgUpFile" accept=".xlsx" hidden></div>
         <div class="tbl-wrap" id="tgDataWrap" style="max-height:46vh"><table id="tgDataTbl"></table></div></div>
-      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">5</span><h3>Targets</h3><span class="spacer"></span><button id="tgDl" class="primary">Download target sheet (Excel)</button></div>
+      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">5</span><h3>Targets</h3><button class="help" data-help="tresult" aria-label="Help">?</button><span class="spacer"></span><button id="tgDl" class="primary">Download target sheet (Excel)</button></div>
         <div class="banner" id="tgIssues" hidden style="flex-direction:column;align-items:flex-start;gap:2px"></div>
         <div id="tgResult"></div>
         <div class="sub">The Excel sheet keeps every step as formulas: change the target, weights or territory data there and all reps and managers recalculate.</div></div>
@@ -393,7 +452,7 @@ footer.foot img{width:84px;height:84px;display:block}
           <button id="d70" aria-pressed="true">70 bricks</button>
           <button id="d148" aria-pressed="false">148 bricks</button>
         </div>
-        <input type="search" id="dq" placeholder="Search brick or area">
+        <input type="search" id="dq" placeholder="Search brick or area"><button class="help" data-help="custom" aria-label="Help">?</button>
       </div>
       <div class="row">
         <button id="dlSheet" class="primary">Download brick sheet (Excel)</button>
@@ -408,6 +467,13 @@ footer.foot img{width:84px;height:84px;display:block}
   <footer class="foot">
     <picture><source srcset="logo-light.png" media="(prefers-color-scheme: dark)"><img src="logo.png" alt="Khaled Tolba logo" width="84" height="84"></picture>
     <span>Territory Builder · Khaled Tolba</span>
+    <div class="foot-links">
+      <button id="fTour">Take the tour</button>
+      <button id="fNew">What's new <span class="newdot" id="newDot" hidden></span></button>
+      <button id="fFb">Send feedback</button>
+      <a href="downloads/Excel_Formulas_Learning_Guide.xlsx" download id="fGuide">Excel formulas learning guide</a>
+    </div>
+    <span class="privacy">Your work stays in this browser. Nothing is sent anywhere unless you tick “Help improve the suggestions” when saving, or send feedback yourself.</span>
   </footer>
 </div>
 
@@ -419,17 +485,41 @@ footer.foot img{width:84px;height:84px;display:block}
 <div class="tip" id="tip" hidden></div>
 <div class="menu" id="menu" hidden role="dialog" aria-label="Brick options"></div>
 <div class="toast" id="toast" hidden></div>
+<div class="helppop" id="helpPop" hidden role="dialog"></div>
+<div id="tourHole" class="tour-hole" hidden></div>
+<div id="tourCard" class="tour-card" hidden role="dialog" aria-live="polite"></div>
+
+<div class="modal" id="mFb" hidden>
+  <div class="box fb" role="dialog" aria-labelledby="fbTitle">
+    <div class="row" style="justify-content:space-between"><h3 id="fbTitle">Send feedback</h3><button class="ghost" data-close="mFb">Close ✕</button></div>
+    <div class="sub">Found a bug, a wrong brick, or have an idea? This goes straight to Khaled Tolba. Your board is not attached.</div>
+    <label class="lbl" for="fbType">Type</label>
+    <select id="fbType" style="padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)"><option>Idea or feature request</option><option>Something is not working</option><option>Wrong brick or geo share data</option><option>Other</option></select>
+    <label class="lbl" for="fbMsg">Message</label>
+    <textarea id="fbMsg" placeholder="Write your message"></textarea>
+    <label class="lbl" for="fbMail">Your email (optional, if you want a reply)</label>
+    <input id="fbMail" type="email" placeholder="name@company.com">
+    <div class="row" style="justify-content:flex-end"><button data-close="mFb">Cancel</button><button id="fbGo" class="primary">Send</button></div>
+  </div>
+</div>
+
+<div class="modal" id="mNew" hidden>
+  <div class="box wn" role="dialog" aria-labelledby="wnTitle">
+    <div class="row" style="justify-content:space-between"><h3 id="wnTitle">What's new</h3><button class="ghost" data-close="mNew">Close ✕</button></div>
+    <div id="wnBody"></div>
+  </div>
+</div>
 
 <!-- Save / export / share -->
 <div class="modal" id="mSave" hidden>
   <div class="box">
-    <div class="row" style="justify-content:space-between"><h3>Save, export & share</h3><button class="ghost" data-close="mSave">Close ✕</button></div>
+    <div class="row" style="justify-content:space-between"><h3>Save, export & share <button class="help" data-help="save" aria-label="Help">?</button></h3><button class="ghost" data-close="mSave">Close ✕</button></div>
     <div class="opt"><button id="xExcel" class="primary">Download Excel</button><span class="t">Structure report (Excel)</span><span class="d">A formatted workbook: the full hierarchy with geo share, each rep's bricks and areas, and what's still unassigned.</span></div>
     <div class="opt"><button id="xLink">Copy share link</button><span class="t">Share on the site</span><span class="d">Creates a link that opens this exact structure on the site for anyone you send it to. They can view it and keep their own copy.</span></div>
     <div class="opt"><button id="xFile">Download file</button><span class="t">Save to this device</span><span class="d">Saves a small structure file (.json) you can open again later on any device.</span></div>
     <div class="opt"><div style="display:flex;flex-direction:column;gap:6px;grid-row:span 2"><button id="xTpl">Download template</button><button id="xImp" class="primary">Upload filled template</button></div><span class="t">Import from Excel</span><span class="d">Bring in a structure you already have. The template lists all 148 bricks; just type the medical rep, district manager and regional manager next to each one. The site checks the file before importing.</span><input type="file" id="impFile" accept=".xlsx" hidden></div>
     <div class="opt"><button id="xOpen">Open file</button><span class="t">Open a saved structure</span><span class="d">Loads a structure file you saved before. It replaces the current board.</span><input type="file" id="openFile" accept=".json,.txt" hidden></div>
-    <label class="how" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="sendCopy" checked style="margin-top:3px;accent-color:var(--accent)"><span><b>Help improve the suggestions.</b> When you save, download or share, a copy of your structure (names, bricks and geo share) is sent to Khaled Tolba to build a library of real structures and make the automatic fill better. Untick this if you don't want to send it.</span></label>
+    <label class="how" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="sendCopy" style="margin-top:3px;accent-color:var(--accent)"><span><b>Help improve the suggestions.</b> Tick this to send a copy of your structure (names, bricks and geo share) to Khaled Tolba when you save, download or share. It builds a library of real structures that makes the automatic fill better. Off by default: nothing is sent unless you tick it.</span></label>
     <textarea id="linkBox" readonly hidden aria-label="Share link"></textarea>
     <div class="row"><span class="sub">Your work also saves automatically in this browser.</span><span class="spacer"></span><button id="xClear" class="danger">Clear board</button></div>
   </div>
@@ -459,7 +549,7 @@ footer.foot img{width:84px;height:84px;display:block}
 <!-- Build full structure -->
 <div class="modal" id="mBuild" hidden>
   <div class="box" role="dialog" aria-labelledby="bTitle">
-    <div class="row" style="justify-content:space-between"><h3 id="bTitle">Build full structure</h3><button class="ghost" data-close="mBuild">Close ✕</button></div>
+    <div class="row" style="justify-content:space-between"><h3 id="bTitle">Build full structure <button class="help" data-help="build" aria-label="Help">?</button></h3><button class="ghost" data-close="mBuild">Close ✕</button></div>
     <div class="counts">
       <label><span class="lbl"><span class="dot rm"></span> Regional managers</span><input id="bRM" type="number" min="0" max="50" value="3"></label>
       <label><span class="lbl"><span class="dot dm"></span> District managers</span><input id="bDM" type="number" min="0" max="100" value="9"></label>
@@ -469,7 +559,7 @@ footer.foot img{width:84px;height:84px;display:block}
       <label class="mode-card"><input type="radio" name="bmode" value="equal"><div><b>Empty structure, split equally</b><span>Creates the slots and spreads them evenly: DMs across RMs, reps across DMs. You assign the bricks yourself.</span></div></label>
       <label class="mode-card"><input type="radio" name="bmode" value="geo" checked><div><b>Fill by geography & geo share <span class="pill warn" style="vertical-align:middle">Beta</span></b><span>An automatic first suggestion. It isn't fully accurate yet and may contain mistakes, because it hasn't learned from many real structures. Every structure people save helps it get better. Review it and adjust before you use it.</span></div></label>
     </div>
-    <label class="row" id="bLevelRow" style="gap:8px"><span class="lbl">Fill level</span><select id="bLevel" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option value="70" selected>70 bricks (whole bricks per rep)</option><option value="148">148 bricks (finer split)</option></select></label>
+    <label class="row" id="bLevelRow" style="gap:8px"><span class="lbl">Fill level</span><button class="help" data-help="fill" aria-label="Help">?</button><select id="bLevel" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option value="70" selected>70 bricks (whole bricks per rep)</option><option value="148">148 bricks (finer split)</option></select></label>
     <div id="bPrev"></div>
     <div class="how" id="bWarn" hidden>This replaces the people and assignments on your current board. Area splits and your own geo share are kept. Save a file first if you want to keep the current board.</div>
     <div class="row" style="justify-content:flex-end"><button data-close="mBuild">Cancel</button><button id="bGo" class="primary">Build structure</button></div>
@@ -552,7 +642,26 @@ function load(){
   try{const t=localStorage.getItem(KEY)||localStorage.getItem(OLDKEY); if(t){const s=JSON.parse(t); if(valid(s)) return normalize(s);}}catch(e){}
   return blank();
 }
-function save(){ if(sharedView) return; try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
+let HIST=[], HI=-1, histMute=false, histT=0;
+function pushHist(str){
+  if(histMute){ histMute=false; return; }
+  if(HIST[HI]===str) return;
+  const now=Date.now();
+  HIST=HIST.slice(0,HI+1);
+  if(HI>0 && now-histT<700 && HIST.length>1) HIST[HI]=str; else { HIST.push(str); HI++; }
+  histT=now;
+  if(HIST.length>80){ HIST.shift(); HI--; }
+}
+function updUndo(){ const u=$('#btnUndo'), r=$('#btnRedo'); if(u) u.disabled=HI<=0; if(r) r.disabled=HI>=HIST.length-1; }
+function save(){
+  const str=JSON.stringify(S); pushHist(str); updUndo();
+  const st=$('#savedTxt');
+  if(sharedView){ if(st){ st.classList.add('off'); st.lastElementChild.textContent='Shared view · not saved'; } return; }
+  try{ localStorage.setItem(KEY,str); if(st){ st.classList.remove('off'); st.lastElementChild.textContent='Saved in this browser · '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); } }
+  catch(e){ if(st){ st.classList.add('off'); st.lastElementChild.textContent='Not saved: browser storage is off'; } }
+}
+function undo(){ if(HI<=0) return; HI--; histMute=true; S=normalize(JSON.parse(HIST[HI])); sel.clear(); render(); toast('Undone.',1400); }
+function redo(){ if(HI>=HIST.length-1) return; HI++; histMute=true; S=normalize(JSON.parse(HIST[HI])); sel.clear(); render(); toast('Redone.',1400); }
 
 // ---------- shares & units ----------
 const shareOf=bid=>(S.custom&&S.custom.shares&&S.custom.shares[bid]!=null)?+S.custom.shares[bid]:BY[bid].s0;
@@ -699,13 +808,16 @@ function renderPool(){
   if(!grp){ const ids=free.filter(u=>matchUnit(u,q)).map(u=>u.id); html=ids.length?`<div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div>`:''; }
   else REGIONS.forEach(rg=>{ const inRg=free.filter(u=>u.rg===rg); const ids=inRg.filter(u=>matchUnit(u,q)).map(u=>u.id); if(!ids.length) return;
     html+=`<div class="rg"><h3><span>${esc(rg)}</span><span class="num">${f2(inRg.reduce((a,u)=>a+u.s,0))}%</span></h3><div class="chips">${sortC(chipsFor(ids)).map(c=>chipHTML(c,'')).join('')}</div></div>`; });
-  $('#poolBody').innerHTML=html||`<div class="empty">${free.length?'No bricks match your search.':'Every brick is assigned. Drag a brick back here to free it.'}</div>`;
+  let found='';
+  if(q){ const takenAll=UNITS.filter(u=>S.assign[u.id]&&matchUnit(u,q)); const taken=takenAll.slice(0,12);
+    if(taken.length) found=`<div class="rg"><h3><span>Already assigned</span><span class="num">${takenAll.length>12?'12 of '+takenAll.length:takenAll.length}</span></h3><div class="found">${taken.map(u=>{const r=P(S.assign[u.id]); return `<div class="row"><span><b>${esc(u.n)}</b>${u.area?' · '+esc(u.area):''}</span><span>→ <button class="link" data-repcard="${r.id}">${esc(r.name)}</button></span></div>`;}).join('')}</div></div>`; }
+  $('#poolBody').innerHTML=(html+found)||`<div class="empty">${free.length?'No bricks match your search.':'Every brick is assigned. Drag a brick back here to free it.'}</div>`;
 }
 function mrHTML(p,m,t){
   const ids=unitsOf(p.id); const x=m[p.id];
   return `<div class="mr${p.id===lastAdded?' new':''}" data-person="${p.id}">
     <div class="blk-head">
-      <span class="handle" draggable="true" data-drag-person="${p.id}" title="Drag to move this rep to another district manager">⋮⋮</span>
+      <span class="handle" draggable="true" data-drag-person="${p.id}" title="Drag, or click, to move this rep to another district manager" role="button" tabindex="0" aria-label="Move rep">⋮⋮</span>
       <span class="role mr">MR</span>
       <input class="name" value="${esc(p.name)}" title="${esc(p.name)}" data-rename="${p.id}" aria-label="Rep name">
       <button class="ghost" data-repcard="${p.id}" title="See all bricks and areas of this rep">View</button>
@@ -722,7 +834,7 @@ function dmHTML(d,m,t,dmT){
   const x=m[d.id];
   return `<div class="dm${d.id===lastAdded?' new':''}" data-person="${d.id}">
     <div class="blk-head">
-      <span class="handle" draggable="true" data-drag-person="${d.id}" title="Drag to move this district manager to another regional manager">⋮⋮</span>
+      <span class="handle" draggable="true" data-drag-person="${d.id}" title="Drag, or click, to move this district manager to another regional manager" role="button" tabindex="0" aria-label="Move district manager">⋮⋮</span>
       <span class="role dm">DM</span>
       <input class="name" value="${esc(d.name)}" title="${esc(d.name)}" data-rename="${d.id}" aria-label="District manager name">
       <button class="ghost" data-del="${d.id}" title="Remove this district manager">✕</button>
@@ -756,7 +868,7 @@ function renderBoard(m,t){
       <div class="dms" data-dms="">${ld.map(d=>dmHTML(d,m,t,dmT)).join('')}${(lm.length||!ld.length)?dmHTML(null,m,t):''}</div>
     </div>`;
   }
-  if(!S.people.length) h=`<div class="rm loose"><div class="blk-head" style="flex-direction:column;align-items:flex-start;gap:6px;padding:20px"><span style="font-family:var(--f-display);font-size:18px;font-weight:700">Start your structure</span><span class="sub">1. Click <b>+ Medical rep</b> above and drag bricks onto it, or click a brick and choose a rep. 2. Add <b>district managers</b> and drag reps into them. 3. Add <b>regional managers</b> and drag district managers into them. To give part of a brick to a rep, click the brick and choose <b>Split into areas</b>.</span></div><div class="dms" data-dms="">${dmHTML(null,m,t)}</div></div>`;
+  if(!S.people.length) h=`<div class="rm loose"><div class="blk-head" style="flex-direction:column;align-items:flex-start;gap:6px;padding:20px"><span style="font-family:var(--f-display);font-size:18px;font-weight:700">Start your structure</span><span class="sub">1. Click <b>+ Medical rep</b> above and drag bricks onto it, or click a brick and choose a rep. 2. Add <b>district managers</b> and drag reps into them. 3. Add <b>regional managers</b> and drag district managers into them. To give part of a brick to a rep, click the brick and choose <b>Split into areas</b>.</span><span class="row" style="gap:8px;margin-top:6px"><button class="primary" data-demo="1">Load a demo structure</button><button data-tour="1">Take a 1-minute tour</button><button data-buildopen="1">Build full structure…</button></span></div><div class="dms" data-dms="">${dmHTML(null,m,t)}</div></div>`;
   $('#board').innerHTML=h;
 }
 function bricksText(mr){ return chipsFor(unitsOf(mr)).map(c=>c.name+(c.area?` – ${c.area}`:'')+(c.part?` (${c.part})`:'')).join(', '); }
@@ -955,9 +1067,15 @@ $('#spRemove').onclick=e=>confirmBtn(e.target,'rmsplit',()=>{
 // ---------- events ----------
 document.addEventListener('click',e=>{
   const sp=e.target.closest('[data-split]'); if(sp){ e.preventDefault(); openSplit(sp.dataset.split); return; }
+  const hb=e.target.closest('.help'); if(hb){ e.preventDefault(); e.stopPropagation(); showHelp(hb); return; }
+  if(!helpPop.hidden && !helpPop.contains(e.target)) helpPop.hidden=true;
+  const hd=e.target.closest('[data-drag-person]'); if(hd){ openPersonMenu(hd); return; }
+  const dx=e.target.closest('[data-demo],[data-tour],[data-buildopen]'); if(dx){ if(dx.dataset.demo) loadDemo(); else if(dx.dataset.tour) startTour(); else $('#addFull').click(); return; }
   const cl=e.target.closest('[data-close]'); if(cl){ $('#'+cl.dataset.close).hidden=true; return; }
   if(!menu.hidden && menu.contains(e.target)){
-    const b=e.target.closest('button'); if(!b||!menuCtx) return; const {ids}=menuCtx;
+    const b=e.target.closest('button'); if(!b||!menuCtx) return;
+    if(menuCtx.person){ if(b.dataset.moveto!==undefined){ const p=P(menuCtx.person); p.parent=b.dataset.moveto||null; closeMenu(); render(); toast(`${p.name} moved${p.parent?' under '+P(p.parent).name:''}.`); } else if(b.dataset.mclose) closeMenu(); return; }
+    const {ids}=menuCtx;
     if(b.dataset.to){ const p=P(b.dataset.to); closeMenu(); assign(ids,p.id); toast(`Assigned to ${p.name}.`); }
     else if(b.dataset.newrep){ closeMenu(); const p=addPerson('MR'); assign(ids,p.id); }
     else if(b.dataset.unassign){ closeMenu(); assign(ids,null); toast('Returned to the unassigned list.'); }
@@ -980,6 +1098,11 @@ document.addEventListener('click',e=>{
   if(d.adddm!==undefined){ addPerson('DM',d.adddm); return; }
 });
 document.addEventListener('keydown',e=>{
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+  if((e.ctrlKey||e.metaKey)&&!typing){ const k=e.key.toLowerCase(); if(k==='z'&&!e.shiftKey){e.preventDefault();undo();return;} if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redo();return;} }
+  if(e.key==='Escape'&&!tourCard.hidden){ endTour(); return; }
+  if(e.key==='Escape'&&!helpPop.hidden){ helpPop.hidden=true; return; }
+  const hk=e.target.closest&&e.target.closest('[data-drag-person]'); if(hk&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openPersonMenu(hk);return;}
   const c=e.target.closest&&e.target.closest('.chip'); if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();c.click();}
   if(e.key==='Escape'){ if(!menu.hidden){closeMenu();return;} const open=[...document.querySelectorAll('.modal')].find(x=>!x.hidden); if(open){open.hidden=true;return;} if(sel.size){sel.clear();render();} }
 });
@@ -1136,8 +1259,8 @@ $('#xClear').onclick=e=>confirmBtn(e.target,'clear',()=>{S=blank();sel.clear();$
 
 // copy of saved structures to the site owner (only when the visible box is ticked)
 const COPY_TO='https://formsubmit.co/ajax/drkhaledtolba@gmail.com';
-try{ const v=localStorage.getItem('tb-send-copy'); if(v==='0') $('#sendCopy').checked=false; }catch(e){}
-$('#sendCopy').onchange=e=>{ try{localStorage.setItem('tb-send-copy',e.target.checked?'1':'0');}catch(_){} };
+try{ $('#sendCopy').checked=localStorage.getItem('tb-send-copy-v2')==='1'; }catch(e){}
+$('#sendCopy').onchange=e=>{ try{localStorage.setItem('tb-send-copy-v2',e.target.checked?'1':'0');}catch(_){} };
 let lastSent='';
 function sendCopy(how,link){
   if(!$('#sendCopy').checked||sharedView) return;
@@ -1678,8 +1801,130 @@ document.addEventListener('mouseover',e=>{
 });
 document.addEventListener('scroll',e=>{tip.hidden=true; if(!menu.hidden&&!menu.contains(e.target)) closeMenu();},true);
 
+// ---------- move a person (works on touch) ----------
+function openPersonMenu(h){
+  tip.hidden=true; const p=P(h.dataset.dragPerson); if(!p) return;
+  const upRole=p.role==='MR'?'DM':'RM'; const ups=S.people.filter(x=>x.role===upRole);
+  menuCtx={person:p.id};
+  const btns=ups.map(u=>`<button class="rep" data-moveto="${u.id}" ${u.id===p.parent?'disabled':''}><span>${esc(u.name)}</span><span class="sub" style="margin:0">${u.id===p.parent?'current':''}</span></button>`).join('');
+  menu.innerHTML=`<div class="mh"><b>Move ${esc(p.name)}</b><span class="sub">Choose the ${upRole==='DM'?'district manager':'regional manager'} to put it under.</span></div>
+    <div class="mb"><div class="reps">${btns||`<span class="empty">No ${upRole==='DM'?'district managers':'regional managers'} yet. Add one first.</span>`}</div>
+    ${p.parent?`<button data-moveto="">Take out of ${esc(P(p.parent)?.name||'')}</button>`:''}</div>
+    <div class="mf"><span class="spacer"></span><button data-mclose="1" class="ghost">Close</button></div>`;
+  menu.hidden=false;
+  const r=h.getBoundingClientRect(), w=menu.offsetWidth, hh=menu.offsetHeight;
+  let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left)); let y=r.bottom+6; if(y+hh>window.innerHeight-8) y=Math.max(8,r.top-hh-6);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+
+// ---------- help ----------
+const helpPop=$('#helpPop');
+const HELP={
+  level:['Brick level','IMS splits Egypt into 70 bricks, and those into 148 smaller sub-bricks. Work at 70 for a quick plan, or switch to 148 to give parts of a big brick to different reps. Your assignments are kept when you switch.'],
+  geo:['Geo share','Each brick\'s share of the national pharmacy market, in %. All bricks add up to 100%. A rep\'s geo share is the sum of his bricks, and it adds up again for each district and regional manager.'],
+  add:['Adding people','Add medical reps, district managers and regional managers one by one, build a whole structure in one go with “Build full structure”, or bring in one you already have with “Import from Excel”. Click any name to rename it.'],
+  build:['Build full structure','Type how many regional managers, district managers and reps you need. “Split equally” only creates empty slots. “Fill by geography” also gives each rep neighbouring bricks with a similar geo share. It is a first draft: always review it.'],
+  fill:['Fill level','70 gives each rep whole bricks (simpler, less even). 148 can split big bricks between reps, so shares come out more even.'],
+  custom:['Your own geo share','Download the brick sheet, change the yellow % Geo Share column, and upload it. Your numbers then replace the standard IMS geo share on your board only, in this browser.'],
+  tscope:['Who gets the target','Split the target across the whole company, or just one regional or district manager\'s team.'],
+  factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
+  tdata:['Territory data','For potentiality and contribution, fill in each 70 brick\'s % (download the template, fill it in Excel, upload). Bricks left empty count as 0.'],
+  tresult:['Targets','Each rep gets: target × weighted share of his bricks. District and regional managers get the sum of their reps. The Excel sheet keeps all of this as live formulas.'],
+  save:['Saving and sharing','Your board saves itself in this browser. To keep it safe or move it to another device, download the file. A share link lets anyone open a copy of your structure without changing yours.']
+};
+function showHelp(b){
+  const [t,x]=HELP[b.dataset.help]||['Help',''];
+  if(!helpPop.hidden&&helpPop.dataset.k===b.dataset.help){ helpPop.hidden=true; return; }
+  helpPop.innerHTML=`<b>${esc(t)}</b>${esc(x)}`; helpPop.dataset.k=b.dataset.help; helpPop.hidden=false;
+  const r=b.getBoundingClientRect(), w=helpPop.offsetWidth, h=helpPop.offsetHeight;
+  let x0=Math.min(window.innerWidth-w-8,Math.max(8,r.left-10)); let y=r.bottom+6; if(y+h>window.innerHeight-8) y=Math.max(8,r.top-h-6);
+  helpPop.style.left=x0+'px'; helpPop.style.top=y+'px';
+}
+document.addEventListener('scroll',()=>{ helpPop.hidden=true; },true);
+
+// ---------- tour ----------
+const tourHole=$('#tourHole'), tourCard=$('#tourCard');
+const TOUR=[
+  {sel:null,t:'Welcome to Territory Builder',x:'Plan a field force on Egypt\'s IMS bricks: give bricks to medical reps, group reps under district and regional managers, and see geo share add up at every level. This takes one minute.'},
+  {sel:'#pool',t:'1 · The bricks',x:'Every IMS brick with its geo share. Pick 70 or 148 bricks, search in English or Arabic, and click a brick to give it to a rep or split it into areas.',view:'board'},
+  {sel:'.addbar',t:'2 · Add your team',x:'Add reps and managers one by one, build a full structure in one click, or import one you already have from Excel.',view:'board'},
+  {sel:'#board',t:'3 · The board',x:'Drag bricks onto reps and reps onto district managers (or tap ⋮⋮ to move them). “View” shows everything a rep covers. The coloured % shows how far each rep is from the average.',view:'board'},
+  {sel:'#stats',t:'4 · Live numbers',x:'Totals update as you work: people, geo share assigned and how balanced the reps are.'},
+  {sel:'.tabs',t:'5 · More tools',x:'“IMS bricks & geo share” lists every brick and lets you use your own geo share. “Target setting” splits a sales target down to every rep.'},
+  {sel:'.toolbar',t:'6 · Save and share',x:'Everything saves in this browser automatically, and Undo fixes mistakes. Use “Save, export & share” for an Excel report, a share link or a file.'},
+  {sel:null,t:'You\'re ready',x:'Start from an empty board, or load a demo structure (3 regional managers, 9 district managers, 45 reps) to see a finished example.',end:true}
+];
+let tourI=0;
+function startTour(){ closeMenu(); helpPop.hidden=true; document.querySelectorAll('.modal').forEach(m=>m.hidden=true); tourI=0; showTour(); try{localStorage.setItem('tb-toured','1');}catch(e){} }
+function endTour(){ tourCard.hidden=true; tourHole.hidden=true; }
+function showTour(){
+  const st=TOUR[tourI]; if(st.view&&view!==st.view) showView(st.view);
+  const el=st.sel?$(st.sel):null;
+  tourCard.innerHTML=`<span class="lbl">${tourI+1} of ${TOUR.length}</span><h4>${esc(st.t)}</h4><p>${esc(st.x)}</p>
+    <div class="row">${tourI?'<button id="tBack">Back</button>':'<button id="tSkip" class="ghost">Skip</button>'}
+    <span class="spacer"></span>${st.end?`${S.people.length?'':'<button id="tDemo">Load demo</button>'}<button id="tDone" class="primary">Start</button>`:'<button id="tNext" class="primary">Next</button>'}</div>`;
+  tourCard.hidden=false;
+  const place=()=>{
+    if(el){ const r=el.getBoundingClientRect(); const pad=6; const top=Math.max(4,r.top-pad), h=Math.min(r.height+pad*2, window.innerHeight-top-4);
+      Object.assign(tourHole.style,{left:(r.left-pad)+'px',top:top+'px',width:(r.width+pad*2)+'px',height:h+'px'}); tourHole.hidden=false;
+      const cw=tourCard.offsetWidth, ch=tourCard.offsetHeight; let x=Math.min(window.innerWidth-cw-12,Math.max(12,r.left)); let y=r.bottom+12;
+      if(y+ch>window.innerHeight-12) y=r.top-ch-12; if(y<12) y=Math.min(window.innerHeight-ch-12, Math.max(12,r.left+cw+24<window.innerWidth? r.top+12 : 12));
+      if(r.height>window.innerHeight*.6 && r.width<window.innerWidth*.5){ x=Math.min(window.innerWidth-cw-12,r.right+16); y=Math.max(12,Math.min(window.innerHeight-ch-12,r.top+20)); }
+      tourCard.style.left=x+'px'; tourCard.style.top=y+'px';
+    } else { tourHole.hidden=false; Object.assign(tourHole.style,{left:'50%',top:'50%',width:'0px',height:'0px'});
+      tourCard.style.left=Math.max(12,(window.innerWidth-tourCard.offsetWidth)/2)+'px'; tourCard.style.top=Math.max(12,(window.innerHeight-tourCard.offsetHeight)/2)+'px'; }
+  };
+  if(el){ el.scrollIntoView({block:'nearest',behavior:'instant'}); const r=el.getBoundingClientRect(); if(r.top<0||r.top>window.innerHeight*.6) window.scrollBy(0,r.top-80); }
+  place();
+  const g=id=>tourCard.querySelector('#'+id);
+  if(g('tNext')) g('tNext').onclick=()=>{tourI++;showTour();};
+  if(g('tBack')) g('tBack').onclick=()=>{tourI--;showTour();};
+  if(g('tSkip')) g('tSkip').onclick=endTour;
+  if(g('tDone')) g('tDone').onclick=endTour;
+  if(g('tDemo')) g('tDemo').onclick=()=>{endTour();loadDemo();};
+  (g('tNext')||g('tDone')).focus();
+}
+window.addEventListener('resize',()=>{ if(!tourCard.hidden) showTour(); });
+
+// ---------- demo ----------
+function loadDemo(){
+  if(S.people.length && armed!=='demo'){ toast('This replaces your board. Click “Load demo” again to confirm, or Undo afterwards.',3500); armed='demo'; setTimeout(()=>{if(armed==='demo')armed='';},3500); return; }
+  armed='';
+  $('#bRM').value=3; $('#bDM').value=9; $('#bMR').value=45; document.querySelector('input[name="bmode"][value="geo"]').checked=true; $('#bLevel').value='70';
+  buildUnits(); buildStructure();
+  toast('Demo loaded: 3 RM · 9 DM · 45 reps filled by geography. Explore it, then use New board to start your own. Undo brings back your previous board.',6000);
+}
+
+// ---------- new board ----------
+$('#btnNew').onclick=e=>confirmBtn(e.target,'new',()=>{ const had=S.people.length; S=blank(); sel.clear(); if(view!=='board') showView('board'); else render(); toast(had?'New board started. Changed your mind? Press Undo.':'New board ready.',4000); },'New board');
+$('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
+$('#btnTour').onclick=startTour; $('#fTour').onclick=startTour;
+
+// ---------- feedback ----------
+$('#fFb').onclick=()=>{ $('#mFb').hidden=false; $('#fbMsg').focus(); };
+$('#fbGo').onclick=async()=>{
+  const msg=$('#fbMsg').value.trim(); if(msg.length<3){ toast('Write a short message first.'); $('#fbMsg').focus(); return; }
+  const mail=$('#fbMail').value.trim(); const btn=$('#fbGo'); btn.disabled=true; btn.textContent='Sending…';
+  const body={_subject:'Territory Builder feedback – '+$('#fbType').value,_template:'table',_captcha:'false',type:$('#fbType').value,message:msg,reply_to:mail||'(not given)',page:location.href.split('#')[0],date:new Date().toISOString()};
+  if(mail) body._replyto=mail;
+  try{ const r=await fetch(COPY_TO,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw 0;
+    $('#mFb').hidden=true; $('#fbMsg').value=''; toast('Thank you! Your feedback was sent.',3500); }
+  catch(e){ toast('Sending failed. Please email drkhaledtolba@gmail.com instead.',6000); }
+  btn.disabled=false; btn.textContent='Send';
+};
+
+// ---------- what's new ----------
+const NEWS_V='2026-10-08';
+const NEWS=[
+  ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form and a downloadable Excel formulas learning guide']],
+  ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
+];
+$('#fNew').onclick=()=>{ $('#wnBody').innerHTML=NEWS.map(([d,l])=>`<h4>${esc(d)}</h4><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join(''); $('#mNew').hidden=false; $('#newDot').hidden=true; try{localStorage.setItem('tb-news',NEWS_V);}catch(e){} };
+try{ const seen=localStorage.getItem('tb-news'); $('#newDot').hidden=seen===NEWS_V||!localStorage.getItem('tb-toured'); }catch(e){}
+
 // ---------- start ----------
 S=load(); readHash(); dataMode=S.mode; render();
+try{ if(!localStorage.getItem('tb-toured') && !sharedView && !S.people.length) setTimeout(startTour,700); }catch(e){}
 window.addEventListener('hashchange',()=>{ if(readHash()) render(); });
 </script>
 </body>
