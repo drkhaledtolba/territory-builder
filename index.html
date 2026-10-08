@@ -472,7 +472,6 @@ footer.foot img{width:84px;height:84px;display:block}
       <button id="fTour">Take the tour</button>
       <button id="fNew">What's new <span class="newdot" id="newDot" hidden></span></button>
       <button id="fFb">Send feedback</button>
-      <a href="downloads/Excel_Formulas_Learning_Guide.xlsx" download id="fGuide">Excel formulas learning guide</a>
     </div>
     <span class="privacy">Your work stays in this browser. Nothing is sent anywhere unless you tick “Help improve the suggestions” when saving, or send feedback yourself.</span>
   </footer>
@@ -1942,7 +1941,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form and a downloadable Excel formulas learning guide']],
+  ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
   ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
 ];
 $('#fNew').onclick=()=>{ $('#wnBody').innerHTML=NEWS.map(([d,l])=>`<h4>${esc(d)}</h4><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join(''); $('#mNew').hidden=false; $('#newDot').hidden=true; try{localStorage.setItem('tb-news',NEWS_V);}catch(e){} };
