@@ -347,6 +347,7 @@ footer.foot img{width:84px;height:84px;display:block}
         <button id="addDM"><span class="dot dm"></span>+ District manager</button>
         <button id="addRM"><span class="dot rm"></span>+ Regional manager</button>
         <span class="spacer"></span>
+        <button id="addImport">Import from Excel</button>
         <button id="addFull" class="build">Build full structure…</button>
       </div>
       <section class="board" id="board"></section>
@@ -1565,6 +1566,7 @@ $('#xTpl').onclick=async()=>{
   const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Structure_Import_Template_${today()}.xlsx`); toast('Template downloaded. Fill the yellow columns, then upload it.');
 };
 $('#xImp').onclick=()=>$('#impFile').click();
+$('#addImport').onclick=()=>{ $('#linkBox').hidden=true; $('#mSave').hidden=false; const o=$('#xTpl').closest('.opt'); o.scrollIntoView({block:'center'}); o.classList.add('new'); setTimeout(()=>o.classList.remove('new'),2400); };
 let IMP=null;
 $('#impFile').onchange=async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f||!needXL()) return;
