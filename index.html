@@ -315,7 +315,6 @@ footer.foot img{width:84px;height:84px;display:block}
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tBoard" aria-selected="true">Board</button>
-    <button role="tab" id="tBal" aria-selected="false">Balance table</button>
     <button role="tab" id="tData" aria-selected="false">IMS bricks & geo share</button>
     <button role="tab" id="tTgt" aria-selected="false">Target setting</button>
   </div>
@@ -354,18 +353,6 @@ footer.foot img{width:84px;height:84px;display:block}
     </section>
   </div>
 
-  <section id="viewBal" hidden>
-    <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <div class="legend">
-        <span class="pill good">±15%</span> on target
-        <span class="pill warn">±15–35%</span> watch
-        <span class="pill bad">&gt;35%</span> rebalance
-        <span>· the black tick on each bar is the target share</span>
-      </div>
-      <button id="copyTbl">Copy table</button>
-    </div>
-    <div class="tbl-wrap"><table id="balTbl"></table></div>
-  </section>
 
   <section id="viewTgt" hidden>
     <div class="tg-grid">
@@ -624,7 +611,6 @@ function render(){
   ['m148','d148'].forEach(i=>$('#'+i).setAttribute('aria-pressed',S.mode==='148'));
   const m=compute(); const t=target();
   renderBanners(); renderStats(m,t); renderPool(); renderBoard(m,t);
-  if(view==='bal') renderBal(m,t);
   if(view==='data') renderData();
   if(view==='tgt') renderTgt();
   renderSel(); save();
@@ -634,22 +620,61 @@ function renderBanners(){
   const c=S.custom; $('#customBanner').hidden=!c;
   if(c) $('#customTxt').innerHTML=`<b>Using your own geo share</b> from “${esc(c.name)}” (${esc(c.at)}), total ${f2(totalShare())}%. The standard IMS geo share is unchanged.`;
 }
+const tile=(lbl,v,sub,extra)=>`<div class="stat"><span class="lbl">${lbl}</span><span class="v">${v}</span>${extra||''}${sub?`<span class="sub" style="font-size:11px">${sub}</span>`:''}</div>`;
 function renderStats(m,t){
-  const c=counts(), a=assignedShare(), T=totalShare();
+  const box=$('#stats'); const T_=totalShare();
+  if(view==='data'){
+    const nSplit=Object.keys(S.splits).length; const areas=Object.values(S.splits).reduce((a,x)=>a+x.length,0);
+    const rg={}; BASE.forEach(b=>rg[b.rg]=(rg[b.rg]||0)+shareOf(b.id)); const top=Object.entries(rg).sort((a,b)=>b[1]-a[1]);
+    const big70=PARENTS.map(pp=>[pp,KIDS[pp].reduce((a,k)=>a+shareOf(k),0)]).sort((a,b)=>b[1]-a[1])[0];
+    const big148=[...BASE].sort((a,b)=>shareOf(b.id)-shareOf(a.id))[0];
+    const changed=S.custom?BASE.filter(b=>Math.abs(shareOf(b.id)-b.s0)>1e-4).length:0;
+    const full=PARENTS.filter(pp=>UNITS.filter(u=>u.p===pp).every(u=>S.assign[u.id])).length, part=PARENTS.filter(pp=>{const us=UNITS.filter(u=>u.p===pp); const n=us.filter(u=>S.assign[u.id]).length; return n&&n<us.length;}).length;
+    box.innerHTML=
+      tile('Bricks',`70 · 148`,`${nSplit} brick${nSplit===1?'':'s'} split into ${areas} areas`)+
+      tile('Geo share source',S.custom?'Custom':'Standard',S.custom?`${esc(S.custom.name)} · total ${f2(T_)}% · ${changed} bricks changed`:'IMS geo share · total 100%')+
+      tile('Largest region',`${f2(top[0][1])}<small>%</small>`,`${esc(top[0][0])} · smallest ${esc(top[top.length-1][0])} ${f2(top[top.length-1][1])}%`)+
+      tile('Largest 70 brick',`${f2(big70[1])}<small>%</small>`,esc(big70[0]))+
+      tile('Largest 148 brick',`${f2(shareOf(big148.id))}<small>%</small>`,`${esc(big148.n)} · ${esc(big148.p)}`)+
+      tile('Bricks assigned',`${full}<small> of 70</small>`,`${part} partly assigned · ${70-full-part} free`,`<div class="bar"><i style="width:${full/70*100}%"></i></div>`);
+    return;
+  }
+  if(view==='tgt'){
+    const R_=tgCompute(); const tt=T(); const grand=R_.prods.reduce((a,p)=>a+p.value,0); const reps=R_.rows;
+    const node=P(tt.scope); const scope=node?`${node.role==='DM'?'District':'Regional'}: ${esc(node.name)}`:'Whole structure';
+    const w=tt.mode==='total'||tt.sameW?tt.w:null;
+    const mix=w?`${w.g} · ${w.p} · ${w.c}`:'Per product';
+    const vals=reps.map(r=>r.total); const avg=vals.length?grand/vals.length:0; const mx=vals.length?Math.max(...vals):0, mn=vals.length?Math.min(...vals):0;
+    const hi=reps.find(r=>r.total===mx), lo=reps.find(r=>r.total===mn);
+    const bricks=R_.bricks; let filled=0, needed=0;
+    R_.prods.forEach(p=>{ if(p.w.p>0){needed+=bricks.length; filled+=bricks.filter(b=>dget(p.id,'pot',b)>0).length;} if(p.w.c>0){needed+=bricks.length; filled+=bricks.filter(b=>dget(p.id,'con',b)>0).length;} });
+    const ok=!R_.issues.length;
+    box.innerHTML=
+      tile('Total target',grand?fmt0(grand):'—',tt.mode==='products'?`${R_.prods.length} product${R_.prods.length===1?'':'s'}`:'Total value')+
+      tile('Scope',`${reps.length}<small> reps</small>`,scope)+
+      tile('Factor mix',mix,w?'Geo share · Potentiality · Contribution %':'Each product has its own weights')+
+      tile('Average per rep',avg?fmt0(avg):'—',grand?`${f2(100/Math.max(1,reps.length))}% of the target each`:'Enter the target in step 2')+
+      tile('Highest · lowest rep',reps.length&&grand?`${fmtS(mx)} · ${fmtS(mn)}`:'—',reps.length&&grand?`${esc(hi.rep.name)} · ${esc(lo.rep.name)}`:'')+
+      tile('Status',`<span style="color:${ok?'var(--good)':'var(--warn)'}">${ok?'Ready':R_.issues.length+' to fix'}</span>`,needed?`Territory data: ${filled} of ${needed} cells filled`:'Geo share only, no extra data needed');
+    return;
+  }
+  // board
+  const c=counts(), a=assignedShare();
   const mrs=S.people.filter(p=>p.role==='MR').map(p=>m[p.id].share);
   const mn=mrs.length?Math.min(...mrs):0, mx=mrs.length?Math.max(...mrs):0;
   const avg=mrs.length?mrs.reduce((x,y)=>x+y,0)/mrs.length:0;
   const sd=mrs.length?Math.sqrt(mrs.reduce((x,y)=>x+(y-avg)**2,0)/mrs.length):0;
   const cv=avg?sd/avg*100:0;
-  const off=S.people.filter(p=>p.role==='MR'&&t&&Math.abs(dev(m[p.id].share,t))>35).length;
-  const nSplit=Object.keys(S.splits).length;
-  $('#stats').innerHTML=`
-   <div class="stat"><span class="lbl">Geo share assigned</span><span class="v">${f2(a)}<small>% of ${f2(T)}</small></span><div class="bar"><i style="width:${Math.min(100,a/T*100)}%"></i></div></div>
-   <div class="stat"><span class="lbl">Team size</span><span class="v">${c.RM} · ${c.DM} · ${c.MR}</span><span class="sub" style="font-size:11px;white-space:nowrap">Regional · District · Reps</span></div>
-   <div class="stat"><span class="lbl">Target share per rep</span><span class="v"><input id="tgt" class="num" inputmode="decimal" placeholder="${t?f2(t):'auto'}" value="${esc(S.target)}" aria-label="Target share per rep"><small> %</small></span><span class="sub" style="font-size:11px">${S.target?'Your target':'Auto: average of current reps'} · 100% needs ${t?Math.round(T/t):'—'} reps</span></div>
-   <div class="stat"><span class="lbl">Rep share range</span><span class="v">${f2(mn)} – ${f2(mx)}<small>%</small></span></div>
-   <div class="stat"><span class="lbl">Balance (spread)</span><span class="v">${mrs.length?cv.toFixed(0):'—'}<small>% CV</small></span><span class="sub" style="font-size:11px">Lower is more even · ${nSplit} brick${nSplit===1?'':'s'} split into areas</span></div>
-   <div class="stat"><span class="lbl">Reps to rebalance</span><span class="v" style="color:${off?'var(--bad)':'var(--good)'}">${off}</span><span class="sub" style="font-size:11px">More than 35% off target</span></div>`;
+  const over=S.people.filter(p=>p.role==='MR'&&t&&dev(m[p.id].share,t)>35).length, under=S.people.filter(p=>p.role==='MR'&&t&&dev(m[p.id].share,t)<-35).length;
+  const free=UNITS.filter(u=>!S.assign[u.id]); const freeB=new Set(free.map(u=>u.p)).size;
+  const span=[c.RM?`${(c.DM/c.RM).toFixed(1)} DM per RM`:'',c.DM?`${(c.MR/c.DM).toFixed(1)} reps per DM`:''].filter(Boolean).join(' · ')||'Regional · District · Reps';
+  box.innerHTML=
+    tile('Geo share assigned',`${f2(a)}<small>% of ${f2(T_)}</small>`,free.length?`${freeB} bricks still free (${f2(T_-a)}%)`:'Every brick is assigned',`<div class="bar"><i style="width:${Math.min(100,a/T_*100)}%"></i></div>`)+
+    tile('Team size',`${c.RM} · ${c.DM} · ${c.MR}`,span)+
+    `<div class="stat"><span class="lbl">Target share per rep</span><span class="v"><input id="tgt" class="num" inputmode="decimal" placeholder="${t?f2(t):'auto'}" value="${esc(S.target)}" aria-label="Target share per rep"><small> %</small></span><span class="sub" style="font-size:11px">${S.target?'Your target':'Auto: average of current reps'} · 100% needs ${t?Math.round(T_/t):'—'} reps</span></div>`+
+    tile('Rep share range',`${f2(mn)} – ${f2(mx)}<small>%</small>`,mrs.length?`Average ${f2(avg)}%`:'Add reps to see the range')+
+    tile('Balance (spread)',`${mrs.length?cv.toFixed(0):'—'}<small>% CV</small>`,'Lower is more even · under 20% is good')+
+    tile('Reps to rebalance',`<span style="color:${over+under?'var(--bad)':'var(--good)'}">${over+under}</span>`,`${over} too heavy · ${under} too light (35%+ off target)`);
   const ti=$('#tgt'); ti.addEventListener('change',()=>{S.target=ti.value.trim().replace(',','.');render();});
 }
 function matchUnit(u,q){ if(!q) return true; return (u.n+' '+u.p+' '+(u.area||'')+' '+BY[u.bid].ar).toLowerCase().includes(q); }
@@ -955,9 +980,8 @@ $('#addRM').onclick=()=>addPerson('RM'); $('#addDM').onclick=()=>addPerson('DM')
 $('#showAr').onchange=e=>{S.showAreas=e.target.checked;render();};
 $('#q').oninput=renderPool; $('#grp').onchange=renderPool; $('#srt').onchange=renderPool; $('#dq').oninput=renderData;
 $('#selUn').onclick=()=>assign([...sel],null); $('#selClr').onclick=()=>{sel.clear();render();};
-function showView(v){ view=v; [['board','tBoard','viewBoard'],['bal','tBal','viewBal'],['data','tData','viewData'],['tgt','tTgt','viewTgt']].forEach(([k,t,s])=>{$('#'+t).setAttribute('aria-selected',k===v);$('#'+s).hidden=k!==v;}); dataMode=S.mode; render(); }
-$('#tBoard').onclick=()=>showView('board'); $('#tBal').onclick=()=>showView('bal'); $('#tData').onclick=()=>showView('data'); $('#tTgt').onclick=()=>showView('tgt');
-$('#copyTbl').onclick=()=>copyText($('#balTbl').dataset.tsv,'Table copied. Paste it into Excel.');
+function showView(v){ view=v; [['board','tBoard','viewBoard'],['data','tData','viewData'],['tgt','tTgt','viewTgt']].forEach(([k,t,s])=>{$('#'+t).setAttribute('aria-selected',k===v);$('#'+s).hidden=k!==v;}); dataMode=S.mode; render(); }
+$('#tBoard').onclick=()=>showView('board'); $('#tData').onclick=()=>showView('data'); $('#tTgt').onclick=()=>showView('tgt');
 function copyText(txt,msg){ try{navigator.clipboard.writeText(txt).then(()=>toast(msg),()=>toast('Copy was blocked by the browser. Select the text and copy it.'));}catch(e){toast('Copy was blocked by the browser.');} }
 let armed='';
 function confirmBtn(btn,key,fn,label){ if(armed!==key){armed=key;const o=btn.textContent;btn.textContent='Click again to confirm';setTimeout(()=>{if(armed===key){armed='';btn.textContent=o;}},2500);return;} armed='';btn.textContent=label;fn(); }
@@ -1259,6 +1283,7 @@ function tgtDefault(){ return {scope:'all',mode:'total',total:'',products:[{id:'
 function T(){ if(!S.tgt) S.tgt=tgtDefault(); return S.tgt; }
 const num=v=>{ const x=parseFloat(String(v).replace(/,/g,'')); return isNaN(x)?0:x; };
 const fmt0=v=>Math.round(v).toLocaleString('en-US');
+const fmtS=v=>v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':fmt0(v);
 // Products the target is split into. In "total" mode there is one synthetic product.
 function tgProducts(){
   const t=T();
@@ -1342,6 +1367,7 @@ function renderTgtData(){
   }</tbody><tfoot><tr><td><b>Total of these bricks</b></td><td class="r num"><b>${f2(bricks.reduce((a,pp)=>a+brickGeo(pp),0))}</b></td>${cols.map(c=>`<td class="r num" data-dt="${c.pid}|${c.f}"><b>${f2(tot(c))}</b></td>`).join('')}</tr></tfoot>`;
 }
 function renderTgtResult(){
+  if(view==='tgt') renderStats();
   const R_=tgCompute(); const box=$('#tgResult'); const prods=R_.prods; const multi=prods.length>1; const units=T().mode==='products';
   const grand=prods.reduce((a,p)=>a+p.value,0);
   $('#tgGrand').textContent=fmt0(grand);
