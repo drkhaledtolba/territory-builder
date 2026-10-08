@@ -404,9 +404,10 @@ footer.foot img{width:84px;height:84px;display:block}
       <label><span class="lbl"><span class="dot mr"></span> Medical reps</span><input id="bMR" type="number" min="0" max="200" value="45"></label>
     </div>
     <div class="mode-cards">
-      <label class="mode-card"><input type="radio" name="bmode" value="equal" checked><div><b>Empty structure, split equally</b><span>Creates the slots and spreads them evenly: DMs across RMs, reps across DMs. You assign the bricks yourself.</span></div></label>
-      <label class="mode-card"><input type="radio" name="bmode" value="geo"><div><b>Fill by geography & geo share <span class="pill warn" style="vertical-align:middle">Beta</span></b><span>An automatic first suggestion. It isn't fully accurate yet and may contain mistakes, because it hasn't learned from many real structures. Every structure people save helps it get better. Review it and adjust before you use it.</span></div></label>
+      <label class="mode-card"><input type="radio" name="bmode" value="equal"><div><b>Empty structure, split equally</b><span>Creates the slots and spreads them evenly: DMs across RMs, reps across DMs. You assign the bricks yourself.</span></div></label>
+      <label class="mode-card"><input type="radio" name="bmode" value="geo" checked><div><b>Fill by geography & geo share <span class="pill warn" style="vertical-align:middle">Beta</span></b><span>An automatic first suggestion. It isn't fully accurate yet and may contain mistakes, because it hasn't learned from many real structures. Every structure people save helps it get better. Review it and adjust before you use it.</span></div></label>
     </div>
+    <label class="row" id="bLevelRow" style="gap:8px"><span class="lbl">Fill level</span><select id="bLevel" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option value="70" selected>70 bricks (whole bricks per rep)</option><option value="148">148 bricks (finer split)</option></select></label>
     <div id="bPrev"></div>
     <div class="how" id="bWarn" hidden>This replaces the people and assignments on your current board. Area splits and your own geo share are kept. Save a file first if you want to keep the current board.</div>
     <div class="row" style="justify-content:flex-end"><button data-close="mBuild">Cancel</button><button id="bGo" class="primary">Build structure</button></div>
@@ -1108,9 +1109,16 @@ function topNames(list,keyFn,max){
   const title=s=>s.toLowerCase().replace(/\b([a-z])/g,c=>c.toUpperCase()).replace(/\bIi\b/g,'II').replace(/\bIii\b/g,'III').replace(/\bIv\b/g,'IV').replace(/\bN\.sinai\b/i,'N. Sinai');
   return keep.map(title).join(' & ')+(arr.length>keep.length?' +':'');
 }
-function planGeo(nRM,nDM,nMR){
-  buildUnits();
-  const ordered=[]; ZONES.forEach((z,zi)=>z.govs.forEach(g=>UNITS.forEach(u=>{ if(GOV_OF(u.p)===g){ ordered.push(Object.assign({},u,{gov:g,zi})); } })));
+function geoItems(level){
+  buildUnits(); const ordered=[];
+  ZONES.forEach((z,zi)=>z.govs.forEach(g=>{
+    if(level==='148') UNITS.forEach(u=>{ if(GOV_OF(u.p)===g) ordered.push(Object.assign({},u,{gov:g,zi,ids:[u.id]})); });
+    else PARENTS.forEach(pp=>{ if(GOV_OF(pp)!==g) return; const us=UNITS.filter(u=>u.p===pp); ordered.push({p:pp,n:pp,rg:us[0].rg,gov:g,zi,s:sumS(us),ids:us.map(u=>u.id)}); });
+  }));
+  return ordered;
+}
+function planGeo(nRM,nDM,nMR,level){
+  const ordered=geoItems(level||'70');
   const zoneUnits=ZONES.map((z,zi)=>ordered.filter(u=>u.zi===zi));
   // 1. zones -> DM groups
   let groups=[]; // {units, dms}
@@ -1132,6 +1140,7 @@ function planSummary(plan){
   return {min:Math.min(...repShares),max:Math.max(...repShares),avg,cv};
 }
 function readCounts(){ const g=id=>Math.max(0,Math.min(200,parseInt($('#'+id).value)||0)); return {rm:g('bRM'),dm:g('bDM'),mr:g('bMR')}; }
+function bLevel(){ const e=$('#bLevel'); return e?e.value:'70'; }
 function bMode(){ return document.querySelector('input[name="bmode"]:checked').value; }
 function drawBuild(){
   const {rm,dm,mr}=readCounts(), mode=bMode(); const out=$('#bPrev'); const btn=$('#bGo');
@@ -1142,9 +1151,9 @@ function drawBuild(){
     else if(dm>mr){ok=false;msg='<span style="color:var(--bad)">Each district manager needs at least one rep. Use more reps or fewer district managers.</span>';}
     else if(rm>Math.max(dm,1)&&dm){ok=false;msg='<span style="color:var(--bad)">Each regional manager needs at least one district manager.</span>';}
     else if(!dm&&rm){ok=false;msg='<span style="color:var(--bad)">Add district managers to place under the regional managers.</span>';}
-    else if(mr>UNITS.length){ok=false;msg=`<span style="color:var(--bad)">There are only ${UNITS.length} pieces to share out. Use fewer reps or split bricks into areas first.</span>`;}
+    else if(mr>geoItems(bLevel()).length){ok=false;msg=`<span style="color:var(--bad)">At ${bLevel()}-brick level there are only ${geoItems(bLevel()).length} pieces to share out. Use fewer reps${bLevel()==='70'?' or switch the fill to 148 bricks':''}.</span>`;}
     else{
-      const plan=planGeo(rm,dm||1,mr); const s=planSummary(plan);
+      const plan=planGeo(rm,dm||1,mr,bLevel()); const s=planSummary(plan);
       const rows=plan.dms.map((d,i)=>`<tr><td>${dm?esc('DM – '+topNames(d.units,u=>u.gov,3)):'All reps'}</td><td class="r num">${f2(d.share)}</td><td class="r num">${d.reps.length}</td><td class="r num">${f2(d.share/d.reps.length)}</td></tr>`).join('');
       msg=`<div class="row" style="gap:16px;margin-bottom:6px"><span>Rep share <b class="num">${f2(s.min)}–${f2(s.max)}%</b></span><span>Average <b class="num">${f2(s.avg)}%</b></span><span>Spread <b class="num">${s.cv.toFixed(0)}% CV</b></span></div>
         <div class="tbl-wrap" style="max-height:220px"><table><thead><tr><th>District</th><th class="r">Geo share %</th><th class="r">Reps</th><th class="r">Avg / rep</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -1152,7 +1161,7 @@ function drawBuild(){
   } else {
     msg=`<span class="sub">Creates ${rm} regional, ${dm} district and ${mr} rep slots. ${dm&&rm?`About ${(dm/rm).toFixed(1)} DMs per RM. `:''}${mr&&dm?`About ${(mr/dm).toFixed(1)} reps per DM. `:''}No bricks are assigned, so you fill them yourself.</span>`;
   }
-  out.innerHTML=msg; btn.disabled=!ok;
+  out.innerHTML=msg; btn.disabled=!ok; $('#bLevelRow').hidden=mode!=='geo';
   $('#bWarn').hidden=!S.people.length;
 }
 function buildStructure(){
@@ -1165,19 +1174,19 @@ function buildStructure(){
     const dms=[...Array(dm)].map((_,i)=>mk('DM',`District manager ${i+1}`,rms.length?rms[Math.floor(i*rms.length/dm)].id:null));
     [...Array(mr)].forEach((_,i)=>mk('MR',`Medical rep ${i+1}`,dms.length?dms[Math.floor(i*dms.length/mr)].id:null));
   } else {
-    const plan=planGeo(rm,dm||1,mr); const rmOf=new Map();
+    const plan=planGeo(rm,dm||1,mr,bLevel()); const rmOf=new Map();
     plan.rms.forEach((g,i)=>{ const zs=[...new Set(g.flatMap(d=>d.units.map(u=>u.zi)))].sort((a,b)=>a-b); const r=mk('RM',`RM ${i+1} – ${zs.map(z=>ZONES[z].short).join(' · ')}`); g.forEach(d=>rmOf.set(d,r.id)); });
     let n=0; const dmNames=plan.dms.map(d=>topNames(d.units,u=>u.gov,3)); const seen={};
     plan.dms.forEach((d,di)=>{ const base=dmNames[di]; const dup=dmNames.filter(x=>x===base).length>1; seen[base]=(seen[base]||0)+1;
       const dmP=dm?mk('DM',`DM – ${base}${dup?' '+seen[base]:''}`,rmOf.get(d)):null;
-      d.reps.forEach(rep=>{ n++; const m=mk('MR',`MR ${n} – ${topNames(rep,u=>u.p,2)}`,dmP?dmP.id:null); rep.forEach(u=>S.assign[u.id]=m.id); }); });
+      d.reps.forEach(rep=>{ n++; const m=mk('MR',`MR ${n} – ${topNames(rep,u=>u.p,2)}`,dmP?dmP.id:null); rep.forEach(u=>u.ids.forEach(id=>S.assign[id]=m.id)); }); });
   }
   $('#mBuild').hidden=true; sel.clear(); if(view!=='board') showView('board'); else render();
   toast(mode==='geo'?`Structure built: ${rm} RM · ${dm} DM · ${mr} reps, with bricks filled by geography and geo share. Rename people and adjust as you like.`:`Empty structure ready: ${rm} RM · ${dm} DM · ${mr} reps. Drag bricks onto the reps to fill it.`,5500);
 }
 $('#addFull').onclick=()=>{ buildUnits(); const c=counts(); if(c.MR||c.DM||c.RM){ $('#bRM').value=c.RM; $('#bDM').value=c.DM; $('#bMR').value=c.MR; } $('#bGo').textContent='Build structure'; $('#mBuild').hidden=false; drawBuild(); };
 ['bRM','bDM','bMR'].forEach(i=>$('#'+i).addEventListener('input',drawBuild));
-document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('change',drawBuild));
+document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('change',drawBuild)); $('#bLevel').addEventListener('change',drawBuild);
 $('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
 
 // ---------- drag & drop ----------
