@@ -222,6 +222,13 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .counts label{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .counts input{font-family:var(--f-mono);font-size:22px;border:0;background:transparent;width:100%;padding:0}
+.rc-brick{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);display:flex;flex-direction:column;gap:4px}
+.rc-brick .top{display:flex;gap:8px;align-items:baseline}
+.rc-brick .top b{font-family:var(--f-display);font-size:15px}
+.rc-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto}
+.rc-sub{display:grid;grid-template-columns:minmax(0,180px) 70px minmax(0,1fr);gap:8px;font-size:12.5px;align-items:baseline}
+.rc-sub .ar-list{font-size:12.5px}
+@media (max-width:560px){.rc-sub{grid-template-columns:1fr 70px}.rc-sub .ar-list{grid-column:1/-1}}
 /* split editor */
 .sp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .sp-share{font-family:var(--f-mono);font-size:22px;font-weight:500}
@@ -369,8 +376,21 @@ footer.foot img{width:84px;height:84px;display:block}
     <div class="opt"><button id="xLink">Copy share link</button><span class="t">Share on the site</span><span class="d">Creates a link that opens this exact structure on the site for anyone you send it to. They can view it and keep their own copy.</span></div>
     <div class="opt"><button id="xFile">Download file</button><span class="t">Save to this device</span><span class="d">Saves a small structure file (.json) you can open again later on any device.</span></div>
     <div class="opt"><button id="xOpen">Open file</button><span class="t">Open a saved structure</span><span class="d">Loads a structure file you saved before. It replaces the current board.</span><input type="file" id="openFile" accept=".json,.txt" hidden></div>
+    <label class="how" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="sendCopy" checked style="margin-top:3px;accent-color:var(--accent)"><span><b>Help improve the suggestions.</b> When you save, download or share, a copy of your structure (names, bricks and geo share) is sent to Khaled Tolba to build a library of real structures and make the automatic fill better. Untick this if you don't want to send it.</span></label>
     <textarea id="linkBox" readonly hidden aria-label="Share link"></textarea>
     <div class="row"><span class="sub">Your work also saves automatically in this browser.</span><span class="spacer"></span><button id="xClear" class="danger">Clear board</button></div>
+  </div>
+</div>
+
+<!-- Rep card -->
+<div class="modal" id="mRep" hidden>
+  <div class="box" role="dialog" aria-labelledby="rcName">
+    <div class="sp-head">
+      <div><div class="lbl" style="color:var(--mr)">Medical rep</div><h3 id="rcName"></h3><div class="sub" id="rcSub"></div></div>
+      <div style="text-align:right"><div class="lbl">Geo share</div><div class="sp-share" id="rcShare"></div><div id="rcPill"></div></div>
+    </div>
+    <div id="rcBody"></div>
+    <div class="row" style="justify-content:flex-end"><button id="rcCopy">Copy list</button><button data-close="mRep" class="primary">Close</button></div>
   </div>
 </div>
 
@@ -385,7 +405,7 @@ footer.foot img{width:84px;height:84px;display:block}
     </div>
     <div class="mode-cards">
       <label class="mode-card"><input type="radio" name="bmode" value="equal" checked><div><b>Empty structure, split equally</b><span>Creates the slots and spreads them evenly: DMs across RMs, reps across DMs. You assign the bricks yourself.</span></div></label>
-      <label class="mode-card"><input type="radio" name="bmode" value="geo"><div><b>Fill by geography & geo share</b><span>Shares out all 148 bricks so reps get similar geo share. Neighbouring bricks stay together, and a district never mixes areas that are far apart, like Cairo with Alexandria.</span></div></label>
+      <label class="mode-card"><input type="radio" name="bmode" value="geo"><div><b>Fill by geography & geo share <span class="pill warn" style="vertical-align:middle">Beta</span></b><span>An automatic first suggestion. It isn't fully accurate yet and may contain mistakes, because it hasn't learned from many real structures. Every structure people save helps it get better. Review it and adjust before you use it.</span></div></label>
     </div>
     <div id="bPrev"></div>
     <div class="how" id="bWarn" hidden>This replaces the people and assignments on your current board. Area splits and your own geo share are kept. Save a file first if you want to keep the current board.</div>
@@ -586,6 +606,7 @@ function mrHTML(p,m,t){
       <span class="handle" draggable="true" data-drag-person="${p.id}" title="Drag to move this rep to another district manager">⋮⋮</span>
       <span class="role mr">MR</span>
       <input class="name" value="${esc(p.name)}" title="${esc(p.name)}" data-rename="${p.id}" aria-label="Rep name">
+      <button class="ghost" data-repcard="${p.id}" title="See all bricks and areas of this rep">View</button>
       <button class="ghost" data-del="${p.id}" title="Remove this rep">✕</button>
       <span class="mr-stats"><span class="share">${f2(x.share)}%</span>${pill(x.share,t)}<span class="sub" style="font-size:11px">${x.bricks.size} bricks</span><span class="spacer"></span><button class="ghost place" data-place="${p.id}">Place here</button></span>
     </div>
@@ -725,21 +746,41 @@ function openMenu(chip){
   menu.innerHTML=`<div class="mh"><b>${esc(title)}</b><span class="sub"><span class="num">${f2(share)}%</span> geo share · ${from?'assigned to <b style="font-size:13px">'+esc(P(from).name)+'</b>':'unassigned'}</span></div>
    <div class="mb">
      <div class="lbl">${bids.length>1?'Sub-bricks and areas':'Areas in this brick'}</div>${bricks}
-     <div class="lbl">${from?'Move to medical rep':'Assign to medical rep'}</div>
-     ${reps.length>6?'<input type="search" id="repQ" placeholder="Find a rep or district manager">':''}
-     <div class="reps">${repBtns||'<span class="empty">No medical reps yet.</span>'}</div>
-     <button data-newrep="1"><span class="dot mr"></span>Add a new medical rep and assign</button>
+     <div id="moveBox" ${from?'hidden':''} style="display:flex;flex-direction:column;gap:8px">
+       <div class="lbl">${from?'Move to another rep':'Assign to medical rep'}</div>
+       ${reps.length>6?'<input type="search" id="repQ" placeholder="Find a rep or district manager">':''}
+       <div class="reps">${repBtns||'<span class="empty">No medical reps yet.</span>'}</div>
+       <button data-newrep="1"><span class="dot mr"></span>Add a new medical rep and assign</button>
+     </div>
    </div>
    <div class="mf">
-     <button data-msel="1">${ids.every(i=>sel.has(i))?'Remove from selection':'Select (to move several together)'}</button>
-     ${from?'<button data-unassign="1" class="danger">Unassign</button>':''}
+     ${from?'<button data-showmove="1" class="primary">Move to another rep</button><button data-unassign="1" class="danger">Unassign</button>':`<button data-msel="1">${ids.every(i=>sel.has(i))?'Remove from selection':'Select several'}</button>`}
      <span class="spacer"></span><button data-mclose="1" class="ghost">Close</button>
    </div>`;
   menu.hidden=false;
   const r=chip.getBoundingClientRect(), w=menu.offsetWidth, h=menu.offsetHeight;
   let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left)); let y=r.bottom+6; if(y+h>window.innerHeight-8) y=Math.max(8,r.top-h-6);
   menu.style.left=x+'px'; menu.style.top=y+'px';
-  const q=$('#repQ'); if(q){ q.oninput=()=>{const v=q.value.toLowerCase(); menu.querySelectorAll('.rep').forEach(b=>b.hidden=!b.textContent.toLowerCase().includes(v));}; q.focus(); }
+  const q=$('#repQ'); if(q&&!from){ q.focus(); } if(q){ q.oninput=()=>{const v=q.value.toLowerCase(); menu.querySelectorAll('.rep').forEach(b=>b.hidden=!b.textContent.toLowerCase().includes(v));}; }
+}
+
+// ---------- rep card ----------
+function openRepCard(id){
+  closeMenu(); buildUnits(); const m=compute(); const p=P(id); if(!p) return; const d=P(p.parent), r=d&&P(d.parent); const t=target();
+  const us=UNITS.filter(u=>S.assign[u.id]===id); const x=m[id];
+  $('#rcName').textContent=p.name;
+  $('#rcSub').textContent=[d?'District: '+d.name:'No district manager', r?'Region: '+r.name:''].filter(Boolean).join(' · ')+` · ${x.bricks.size} bricks (70) · ${new Set(us.map(u=>u.bid)).size} bricks (148)`;
+  $('#rcShare').textContent=f2(x.share)+'%'; $('#rcPill').innerHTML=pill(x.share,t);
+  const byP={}; us.forEach(u=>(byP[u.p]=byP[u.p]||[]).push(u));
+  const lines=[];
+  $('#rcBody').innerHTML=us.length?`<div class="rc-list">${PARENTS.filter(pp=>byP[pp]).map(pp=>{ const list=byP[pp]; const sh=list.reduce((a,u)=>a+u.s,0);
+      lines.push(`${pp}\t${f2(sh)}%`);
+      return `<div class="rc-brick"><div class="top"><b>${esc(pp)}</b><span class="num sub" style="margin:0">${f2(sh)}%</span><span class="spacer"></span><span class="sub" style="margin:0">${esc(list[0].rg)}</span></div>
+        ${list.map(u=>{ lines.push(`  ${u.n}${u.area?' – '+u.area:''}\t${f2(u.s)}%\t${u.area?'':BY[u.bid].ar}`);
+          return `<div class="rc-sub"><span>${esc(u.n)}${u.area?` <span class="pill area">${esc(u.area)}</span>`:''}</span><span class="num r" style="text-align:right">${f2(u.s)}%</span><span class="ar-list">${u.area?`${f2(u.pct)}% of the brick`:esc(BY[u.bid].ar)}</span></div>`; }).join('')}</div>`; }).join('')}</div>`
+    :'<div class="empty">No bricks yet. Drag bricks onto this rep or click a brick and choose this rep.</div>';
+  $('#rcCopy').onclick=()=>copyText(`${p.name}\t${f2(x.share)}%\n`+lines.join('\n'),'List copied.');
+  $('#mRep').hidden=false;
 }
 
 // ---------- split editor ----------
@@ -820,6 +861,7 @@ document.addEventListener('click',e=>{
     else if(b.dataset.unassign){ closeMenu(); assign(ids,null); toast('Returned to the unassigned list.'); }
     else if(b.dataset.msel){ const on=ids.every(i=>sel.has(i)); ids.forEach(i=>on?sel.delete(i):sel.add(i)); closeMenu(); render(); }
     else if(b.dataset.mclose){ closeMenu(); }
+    else if(b.dataset.showmove){ $('#moveBox').hidden=false; b.remove(); const q=$('#repQ'); if(q) q.focus(); }
     return;
   }
   const t=e.target.closest('button,.chip');
@@ -830,6 +872,7 @@ document.addEventListener('click',e=>{
     openMenu(t); return; }
   const d=t.dataset;
   if(d.place){ assign([...sel],d.place); return; }
+  if(d.repcard){ openRepCard(d.repcard); return; }
   if(d.del){ del(d.del,t); return; }
   if(d.addmr!==undefined){ addPerson('MR',d.addmr); return; }
   if(d.adddm!==undefined){ addPerson('DM',d.adddm); return; }
@@ -976,19 +1019,36 @@ $('#xExcel').onclick=async()=>{
   const keys=Object.keys(S.splits);
   if(keys.length){ const w4=wb.addWorksheet('Area splits'); w4.columns=[{header:'148 Brick',width:26},{header:'70 Brick',width:20},{header:'Brick geo share %',width:16},{header:'Area',width:26},{header:'% of brick',width:11},{header:'Area geo share %',width:16},{header:'Medical rep',width:24}]; styleHeader(w4.getRow(1));
     keys.forEach(bid=>S.splits[bid].forEach((a,k)=>{const mr=P(S.assign['b'+bid+'a'+k]); const row=w4.addRow([BY[bid].n,BY[bid].p,+f2(shareOf(+bid)),a.n,a.p/100,+(shareOf(+bid)*a.p/100).toFixed(4),mr?mr.name:'Unassigned']); row.eachCell({includeEmpty:true},cc=>cc.border=BORDER); row.getCell(3).numFmt='0.00';row.getCell(5).numFmt='0.0%';row.getCell(6).numFmt='0.00'; row.getCell(4).alignment={horizontal:'right',readingOrder:'rtl'};})); }
-  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Territory_Structure_${today()}.xlsx`); toast('Structure report downloaded.');
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Territory_Structure_${today()}.xlsx`); toast('Structure report downloaded.'); sendCopy('Excel report');
 };
 $('#btnSave').onclick=()=>{ $('#linkBox').hidden=true; $('#mSave').hidden=false; };
-$('#xFile').onclick=()=>{ download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`Territory_Structure_${today()}.json`); toast('Structure file saved to your device.'); };
+$('#xFile').onclick=()=>{ download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`Territory_Structure_${today()}.json`); toast('Structure file saved to your device.'); sendCopy('Structure file'); };
 $('#xOpen').onclick=()=>$('#openFile').click();
 $('#openFile').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const s=JSON.parse(r.result); if(!valid(s)) throw 0; S=normalize(s); sel.clear(); $('#mSave').hidden=true; render(); toast('Structure opened.'); }catch(_){ toast('That file is not a saved structure.',4000); } }; r.readAsText(f); };
 $('#xLink').onclick=()=>{
   const code=LZString.compressToEncodedURIComponent(JSON.stringify(S));
   const url=location.origin+location.pathname+'#s='+code;
   const box=$('#linkBox'); box.value=url; box.hidden=false; box.select();
-  copyText(url,'Share link copied. Anyone who opens it sees this structure.');
+  copyText(url,'Share link copied. Anyone who opens it sees this structure.'); sendCopy('Share link',url);
 };
 $('#xClear').onclick=e=>confirmBtn(e.target,'clear',()=>{S=blank();sel.clear();$('#mSave').hidden=true;render();toast('Board cleared. Add a medical rep to start.');},'Clear board');
+
+// copy of saved structures to the site owner (only when the visible box is ticked)
+const COPY_TO='https://formsubmit.co/ajax/drkhaledtolba@gmail.com';
+try{ const v=localStorage.getItem('tb-send-copy'); if(v==='0') $('#sendCopy').checked=false; }catch(e){}
+$('#sendCopy').onchange=e=>{ try{localStorage.setItem('tb-send-copy',e.target.checked?'1':'0');}catch(_){} };
+let lastSent='';
+function sendCopy(how,link){
+  if(!$('#sendCopy').checked||sharedView) return;
+  const json=JSON.stringify(S); if(json===lastSent) return; lastSent=json;
+  buildUnits(); const m=compute(); const c=counts();
+  const reps=S.people.filter(p=>p.role==='MR').map(p=>`${p.name}: ${f2(m[p.id].share)}%`).join(' | ');
+  const body={_subject:`Territory Builder structure – ${c.RM} RM · ${c.DM} DM · ${c.MR} MR`,_template:'table',_captcha:'false',
+    saved_as:how, date:new Date().toISOString(), team:`${c.RM} RM · ${c.DM} DM · ${c.MR} MR`, geo_share_assigned:f2(assignedShare())+'%',
+    area_splits:String(Object.keys(S.splits).length), custom_geo_share:S.custom?S.custom.name:'standard', reps, share_link:link||'',
+    structure_code:LZString.compressToEncodedURIComponent(json)};
+  fetch(COPY_TO,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body)}).catch(()=>{});
+}
 
 // shared link on load
 function readHash(){
