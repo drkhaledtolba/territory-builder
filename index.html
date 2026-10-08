@@ -229,6 +229,38 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .rc-sub{display:grid;grid-template-columns:minmax(0,180px) 70px minmax(0,1fr);gap:8px;font-size:12.5px;align-items:baseline}
 .rc-sub .ar-list{font-size:12.5px}
 @media (max-width:560px){.rc-sub{grid-template-columns:1fr 70px}.rc-sub .ar-list{grid-column:1/-1}}
+.tg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.tg-grid{grid-template-columns:1fr}}
+.tg-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.tg-card.tg-wide{grid-column:1/-1}
+.tg-card.muted{opacity:.75}
+.tg-h{display:flex;align-items:center;gap:10px}
+.tg-h h3{margin:0;font-family:var(--f-display);font-size:18px}
+.tg-step{width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+.tg-select{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:14px}
+.tg-radio{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;cursor:pointer}
+.tg-radio:has(input:checked){background:var(--ink);color:var(--bg);font-weight:600}
+.tg-radio{position:relative}
+.tg-radio input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.tg-radio:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.tg-big{display:flex;flex-direction:column;gap:4px}
+.tg-big input{font-size:22px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.tg-total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line);padding-top:8px}
+.tg-total .num{font-size:22px;font-weight:500}
+.tg-prod input{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;background:var(--bg);min-width:70px}
+.tg-prod td{padding:5px 6px}
+.tg-ws{display:flex;flex-direction:column;gap:8px}
+.tg-w{display:grid;grid-template-columns:minmax(120px,1.2fr) repeat(3,minmax(90px,1fr)) 80px;gap:10px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+@media (max-width:640px){.tg-w{grid-template-columns:1fr 1fr 1fr}.tg-wn{grid-column:1/-1}}
+.tg-wn{font-weight:600;align-self:center}
+.tg-w label{display:flex;flex-direction:column;gap:3px}
+.tg-in{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding-right:8px}
+.tg-in input{border:0;background:transparent;padding:6px 8px;width:100%;font-size:16px;min-width:0}
+.tg-in i{font-style:normal;color:var(--muted)}
+.tg-sum{font-family:var(--f-mono);font-weight:600;text-align:center;padding:6px;border-radius:6px}
+.tg-sum.ok{background:var(--good-bg);color:var(--good)} .tg-sum.bad{background:var(--bad-bg);color:var(--bad)}
+.tg-cell{width:90px;text-align:right;border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--panel)}
+tfoot td{background:var(--sunk);position:sticky;bottom:0}
 /* split editor */
 .sp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .sp-share{font-family:var(--f-mono);font-size:22px;font-weight:500}
@@ -285,6 +317,7 @@ footer.foot img{width:84px;height:84px;display:block}
     <button role="tab" id="tBoard" aria-selected="true">Board</button>
     <button role="tab" id="tBal" aria-selected="false">Balance table</button>
     <button role="tab" id="tData" aria-selected="false">IMS bricks & geo share</button>
+    <button role="tab" id="tTgt" aria-selected="false">Target setting</button>
   </div>
 
   <div class="main" id="viewBoard">
@@ -332,6 +365,37 @@ footer.foot img{width:84px;height:84px;display:block}
       <button id="copyTbl">Copy table</button>
     </div>
     <div class="tbl-wrap"><table id="balTbl"></table></div>
+  </section>
+
+  <section id="viewTgt" hidden>
+    <div class="tg-grid">
+      <div class="tg-card"><div class="tg-h"><span class="tg-step">1</span><h3>Who gets the target</h3></div>
+        <select id="tgScope" class="tg-select" aria-label="Target scope"></select>
+        <div class="sub" id="tgScopeInfo"></div></div>
+      <div class="tg-card"><div class="tg-h"><span class="tg-step">2</span><h3>Target</h3></div>
+        <div class="seg" role="radiogroup" aria-label="Target type" style="align-self:flex-start">
+          <label class="tg-radio"><input type="radio" name="tgMode" value="total"> Total value</label>
+          <label class="tg-radio"><input type="radio" name="tgMode" value="products"> By products</label>
+        </div>
+        <div id="tgTotalBox"><label class="tg-big"><span class="lbl">Target value (EGP)</span><input id="tgTotal" class="num" inputmode="decimal" placeholder="e.g. 50,000,000"></label></div>
+        <div id="tgProdBox" hidden>
+          <div class="tbl-wrap" style="max-height:none"><table class="tg-prod"><thead><tr><th>Product</th><th>Price</th><th>Units</th><th class="r">Value</th><th></th></tr></thead><tbody id="tgProdRows"></tbody></table></div>
+          <button id="tgAddProd" style="align-self:flex-start">+ Add product</button>
+        </div>
+        <div class="tg-total"><span class="lbl">Total target</span><span class="num" id="tgGrand">0</span></div></div>
+      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">3</span><h3>Distribution factors</h3></div>
+        <div class="how"><b>Geo share</b>: the territory's weight in the national market of all products (already in the site). <b>Potentiality</b>: how products similar to yours sell in the territory. <b>Contribution</b>: how your own product sold there, out of your company's national sales. Give each factor a weight; the weights must add up to 100%.</div>
+        <label class="row" id="tgSameRow" style="gap:8px"><input type="checkbox" id="tgSame" style="accent-color:var(--accent)"> Use the same weights for all products</label>
+        <div id="tgWeights" class="tg-ws"></div></div>
+      <div class="tg-card tg-wide" id="tgDataCard"><div class="tg-h"><span class="tg-step">4</span><h3>Territory data</h3></div>
+        <div class="sub" id="tgDataNote"></div>
+        <div class="row" id="tgDataBtns"><button id="tgTpl">Download data template (Excel)</button><button id="tgUp">Upload filled data</button><input type="file" id="tgUpFile" accept=".xlsx" hidden></div>
+        <div class="tbl-wrap" id="tgDataWrap" style="max-height:46vh"><table id="tgDataTbl"></table></div></div>
+      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">5</span><h3>Targets</h3><span class="spacer"></span><button id="tgDl" class="primary">Download target sheet (Excel)</button></div>
+        <div class="banner" id="tgIssues" hidden style="flex-direction:column;align-items:flex-start;gap:2px"></div>
+        <div id="tgResult"></div>
+        <div class="sub">The Excel sheet keeps every step as formulas: change the target, weights or territory data there and all reps and managers recalculate.</div></div>
+    </div>
   </section>
 
   <section id="viewData" hidden>
@@ -479,7 +543,7 @@ const areasList=bid=>BY[bid].ar.split(/\s*[،–]\s*/).map(s=>s.trim()).filter(B
 
 let S, sel=new Set(), view='board', dataMode='70', uid=1, lastAdded=null, sharedView=false;
 const nid=p=>p+(Date.now().toString(36))+(uid++);
-function blank(){return {v:3,mode:'70',target:'',showAreas:false,people:[],assign:{},splits:{},custom:null};}
+function blank(){return {v:3,mode:'70',target:'',showAreas:false,people:[],assign:{},splits:{},custom:null,tgt:null};}
 function valid(s){return s&&Array.isArray(s.people)&&s.assign&&typeof s.assign==='object';}
 function normalize(s){
   s=Object.assign(blank(),s);
@@ -562,6 +626,7 @@ function render(){
   renderBanners(); renderStats(m,t); renderPool(); renderBoard(m,t);
   if(view==='bal') renderBal(m,t);
   if(view==='data') renderData();
+  if(view==='tgt') renderTgt();
   renderSel(); save();
 }
 function renderBanners(){
@@ -890,8 +955,8 @@ $('#addRM').onclick=()=>addPerson('RM'); $('#addDM').onclick=()=>addPerson('DM')
 $('#showAr').onchange=e=>{S.showAreas=e.target.checked;render();};
 $('#q').oninput=renderPool; $('#grp').onchange=renderPool; $('#srt').onchange=renderPool; $('#dq').oninput=renderData;
 $('#selUn').onclick=()=>assign([...sel],null); $('#selClr').onclick=()=>{sel.clear();render();};
-function showView(v){ view=v; [['board','tBoard','viewBoard'],['bal','tBal','viewBal'],['data','tData','viewData']].forEach(([k,t,s])=>{$('#'+t).setAttribute('aria-selected',k===v);$('#'+s).hidden=k!==v;}); dataMode=S.mode; render(); }
-$('#tBoard').onclick=()=>showView('board'); $('#tBal').onclick=()=>showView('bal'); $('#tData').onclick=()=>showView('data');
+function showView(v){ view=v; [['board','tBoard','viewBoard'],['bal','tBal','viewBal'],['data','tData','viewData'],['tgt','tTgt','viewTgt']].forEach(([k,t,s])=>{$('#'+t).setAttribute('aria-selected',k===v);$('#'+s).hidden=k!==v;}); dataMode=S.mode; render(); }
+$('#tBoard').onclick=()=>showView('board'); $('#tBal').onclick=()=>showView('bal'); $('#tData').onclick=()=>showView('data'); $('#tTgt').onclick=()=>showView('tgt');
 $('#copyTbl').onclick=()=>copyText($('#balTbl').dataset.tsv,'Table copied. Paste it into Excel.');
 function copyText(txt,msg){ try{navigator.clipboard.writeText(txt).then(()=>toast(msg),()=>toast('Copy was blocked by the browser. Select the text and copy it.'));}catch(e){toast('Copy was blocked by the browser.');} }
 let armed='';
@@ -1166,8 +1231,8 @@ function drawBuild(){
 }
 function buildStructure(){
   const {rm,dm,mr}=readCounts(), mode=bMode();
-  const keepSplits=S.splits, keepCustom=S.custom, keepMode=S.mode, keepAreas=S.showAreas, keepTarget=S.target;
-  S=blank(); S.splits=keepSplits; S.custom=keepCustom; S.mode=keepMode; S.showAreas=keepAreas; S.target=keepTarget;
+  const keepTgt=S.tgt, keepSplits=S.splits, keepCustom=S.custom, keepMode=S.mode, keepAreas=S.showAreas, keepTarget=S.target;
+  S=blank(); S.tgt=keepTgt; S.splits=keepSplits; S.custom=keepCustom; S.mode=keepMode; S.showAreas=keepAreas; S.target=keepTarget;
   const mk=(role,name,parent)=>{const p={id:nid(role),role,name,parent:parent||null}; S.people.push(p); return p;};
   if(mode==='equal'){
     const rms=[...Array(rm)].map((_,i)=>mk('RM',`Regional manager ${i+1}`));
@@ -1188,6 +1253,256 @@ $('#addFull').onclick=()=>{ buildUnits(); const c=counts(); if(c.MR||c.DM||c.RM)
 ['bRM','bDM','bMR'].forEach(i=>$('#'+i).addEventListener('input',drawBuild));
 document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('change',drawBuild)); $('#bLevel').addEventListener('change',drawBuild);
 $('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
+
+// ---------- target setting ----------
+function tgtDefault(){ return {scope:'all',mode:'total',total:'',products:[{id:'p1',n:'Product 1',price:'',units:'',w:{g:100,p:0,c:0}}],sameW:true,w:{g:100,p:0,c:0},data:{}}; }
+function T(){ if(!S.tgt) S.tgt=tgtDefault(); return S.tgt; }
+const num=v=>{ const x=parseFloat(String(v).replace(/,/g,'')); return isNaN(x)?0:x; };
+const fmt0=v=>Math.round(v).toLocaleString('en-US');
+// Products the target is split into. In "total" mode there is one synthetic product.
+function tgProducts(){
+  const t=T();
+  if(t.mode==='total') return [{id:'all',n:'Total target',price:0,units:0,value:num(t.total),w:t.w}];
+  return t.products.map(p=>({id:p.id,n:p.n||'Product',price:num(p.price),units:num(p.units),value:num(p.price)*num(p.units),w:t.sameW?t.w:p.w}));
+}
+function tgScopeReps(){
+  const sc=T().scope; const all=S.people.filter(p=>p.role==='MR');
+  if(sc==='all') return all;
+  const node=P(sc); if(!node){ T().scope='all'; return all; }
+  if(node.role==='DM') return all.filter(r=>r.parent===node.id);
+  if(node.role==='RM'){ const dms=new Set(S.people.filter(d=>d.role==='DM'&&d.parent===node.id).map(d=>d.id)); return all.filter(r=>dms.has(r.parent)); }
+  return all;
+}
+function tgScopeBricks(reps){ const ids=new Set(reps.map(r=>r.id)); return PARENTS.filter(pp=>UNITS.some(u=>u.p===pp&&ids.has(S.assign[u.id]))); }
+const brickGeo=pp=>UNITS.filter(u=>u.p===pp).reduce((a,u)=>a+u.s,0);
+const dget=(pid,f,pp)=>{ const d=T().data[pid]; return d&&d[f]&&d[f][pp]!=null&&d[f][pp]!==''?num(d[f][pp]):0; };
+function tgCompute(){
+  buildUnits(); const reps=tgScopeReps(); const prods=tgProducts(); const bricks=tgScopeBricks(reps);
+  const raw=reps.map(r=>{ const us=UNITS.filter(u=>S.assign[u.id]===r.id); const o={rep:r,geo:0,pot:{},con:{}};
+    prods.forEach(p=>{o.pot[p.id]=0;o.con[p.id]=0;});
+    us.forEach(u=>{ const frac=u.s/(brickGeo(u.p)||1); o.geo+=u.s; prods.forEach(p=>{ o.pot[p.id]+=frac*dget(p.id,'pot',u.p); o.con[p.id]+=frac*dget(p.id,'con',u.p); }); });
+    return o; });
+  const sum=f=>raw.reduce((a,o)=>a+f(o),0); const G=sum(o=>o.geo);
+  const rows=raw.map(o=>{ const res={rep:o.rep,dm:P(o.rep.parent),geoRaw:o.geo,geoSh:G?o.geo/G:0,p:{}};
+    prods.forEach(p=>{ const PT=sum(x=>x.pot[p.id]), CT=sum(x=>x.con[p.id]);
+      const ps=PT?o.pot[p.id]/PT:0, cs=CT?o.con[p.id]/CT:0;
+      const idx=(p.w.g*res.geoSh+p.w.p*ps+p.w.c*cs)/100;
+      res.p[p.id]={potRaw:o.pot[p.id],conRaw:o.con[p.id],ps,cs,idx,val:p.value*idx,units:p.price?p.value*idx/p.price:0}; });
+    res.total=prods.reduce((a,p)=>a+res.p[p.id].val,0); return res; });
+  const issues=[];
+  if(!reps.length) issues.push('There are no medical reps in this scope yet. Build or fill the structure first.');
+  if(reps.length&&!G) issues.push('The reps in this scope have no bricks yet, so there is nothing to split the target on.');
+  prods.forEach(p=>{ const s=p.w.g+p.w.p+p.w.c; if(Math.abs(s-100)>0.01) issues.push(`Factor weights for “${p.n}” add up to ${s}%. They must add up to 100%.`);
+    if(!p.value) issues.push(t_noValue(p));
+    if(p.w.p>0&&!raw.some(o=>o.pot[p.id]>0)) issues.push(`“${p.n}” uses potentiality but no potentiality data is filled for these bricks (step 4).`);
+    if(p.w.c>0&&!raw.some(o=>o.con[p.id]>0)) issues.push(`“${p.n}” uses contribution but no contribution data is filled for these bricks (step 4).`); });
+  return {reps,prods,bricks,rows,issues};
+}
+const t_noValue=p=>T().mode==='total'?'Enter the target value in step 2.':`“${p.n}” has no value yet. Enter its price and units.`;
+const usesData=()=>tgProducts().some(p=>p.w.p>0||p.w.c>0);
+
+function renderTgt(){
+  const t=T(); buildUnits();
+  // scope list
+  const opts=[`<option value="all">Whole structure (all reps)</option>`]
+    .concat(S.people.filter(p=>p.role==='RM').map(p=>`<option value="${p.id}">Regional: ${esc(p.name)}</option>`))
+    .concat(S.people.filter(p=>p.role==='DM').map(p=>`<option value="${p.id}">District: ${esc(p.name)}</option>`));
+  $('#tgScope').innerHTML=opts.join(''); $('#tgScope').value=P(t.scope)?t.scope:'all';
+  const reps=tgScopeReps(); const g=reps.reduce((a,r)=>a+UNITS.filter(u=>S.assign[u.id]===r.id).reduce((x,u)=>x+u.s,0),0);
+  $('#tgScopeInfo').innerHTML=`${reps.length} medical reps · <span class="num">${f2(g)}%</span> geo share in this scope. ${t.scope==='all'?'':'Enter the target for this manager only; it is split among their reps.'}`;
+  document.querySelector(`input[name="tgMode"][value="${t.mode}"]`).checked=true;
+  $('#tgTotalBox').hidden=t.mode!=='total'; $('#tgProdBox').hidden=t.mode!=='products';
+  $('#tgTotal').value=t.total;
+  $('#tgProdRows').innerHTML=t.products.map((p,i)=>`<tr data-i="${i}"><td><input data-pf="n" value="${esc(p.n)}" aria-label="Product name"></td><td><input data-pf="price" class="num" inputmode="decimal" value="${esc(p.price)}" placeholder="0" aria-label="Price"></td><td><input data-pf="units" class="num" inputmode="decimal" value="${esc(p.units)}" placeholder="0" aria-label="Units"></td><td class="r num" data-pv>${fmt0(num(p.price)*num(p.units))}</td><td><button class="ghost" data-prm="${i}" ${t.products.length<2?'disabled':''} title="Remove product">✕</button></td></tr>`).join('');
+  $('#tgSameRow').hidden=t.mode!=='products'; $('#tgSame').checked=t.sameW;
+  renderTgtWeights(); renderTgtData(); renderTgtResult();
+}
+function weightRow(key,label,w){
+  const s=w.g+w.p+w.c, ok=Math.abs(s-100)<0.01;
+  return `<div class="tg-w" data-wk="${key}"><span class="tg-wn">${esc(label)}</span>
+    <label><span class="lbl">Geo share</span><span class="tg-in"><input data-wf="g" class="num" inputmode="decimal" value="${w.g}"><i>%</i></span></label>
+    <label><span class="lbl">Potentiality</span><span class="tg-in"><input data-wf="p" class="num" inputmode="decimal" value="${w.p}"><i>%</i></span></label>
+    <label><span class="lbl">Contribution</span><span class="tg-in"><input data-wf="c" class="num" inputmode="decimal" value="${w.c}"><i>%</i></span></label>
+    <span class="tg-sum ${ok?'ok':'bad'}" data-wsum>${ok?'✓ 100%':s+'%'}</span></div>`;
+}
+function renderTgtWeights(){
+  const t=T();
+  const rows=(t.mode==='total'||t.sameW)?[weightRow('all',t.mode==='total'?'Total target':'All products',t.w)]:t.products.map((p,i)=>weightRow('p'+i,p.n||'Product',p.w));
+  $('#tgWeights').innerHTML=rows.join('');
+}
+function renderTgtData(){
+  const t=T(); const card=$('#tgDataCard'); const need=usesData(); card.classList.toggle('muted',!need);
+  $('#tgDataNote').innerHTML=need?'Fill each brick\'s share of the national total, in %. Use the Excel template for many bricks, or type here. Bricks of this scope only.':'Not needed: the target is split on geo share only. Give potentiality or contribution a weight in step 3 to use your own data.';
+  $('#tgDataWrap').hidden=!need; $('#tgDataBtns').hidden=!need; if(!need) return;
+  const prods=tgProducts(); const reps=tgScopeReps(); const bricks=tgScopeBricks(reps);
+  const cols=[]; prods.forEach(p=>{ if(p.w.p>0) cols.push({pid:p.id,f:'pot',h:`Potentiality %${prods.length>1?' · '+p.n:''}`}); if(p.w.c>0) cols.push({pid:p.id,f:'con',h:`Contribution %${prods.length>1?' · '+p.n:''}`}); });
+  const tot=c=>bricks.reduce((a,pp)=>a+dget(c.pid,c.f,pp),0);
+  $('#tgDataTbl').innerHTML=`<thead><tr><th>70 brick</th><th class="r">Geo share %</th>${cols.map(c=>`<th class="r">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${
+    bricks.map(pp=>`<tr><td>${esc(pp)}</td><td class="r num">${f2(brickGeo(pp))}</td>${cols.map(c=>{const d=T().data[c.pid]; const v=d&&d[c.f]&&d[c.f][pp]!=null?d[c.f][pp]:''; return `<td class="r"><input class="num tg-cell" data-d="${c.pid}|${c.f}|${esc(pp)}" inputmode="decimal" value="${esc(v)}" placeholder="0"></td>`;}).join('')}</tr>`).join('')
+  }</tbody><tfoot><tr><td><b>Total of these bricks</b></td><td class="r num"><b>${f2(bricks.reduce((a,pp)=>a+brickGeo(pp),0))}</b></td>${cols.map(c=>`<td class="r num" data-dt="${c.pid}|${c.f}"><b>${f2(tot(c))}</b></td>`).join('')}</tr></tfoot>`;
+}
+function renderTgtResult(){
+  const R_=tgCompute(); const box=$('#tgResult'); const prods=R_.prods; const multi=prods.length>1; const units=T().mode==='products';
+  const grand=prods.reduce((a,p)=>a+p.value,0);
+  $('#tgGrand').textContent=fmt0(grand);
+  $('#tgIssues').innerHTML=R_.issues.map(x=>`<div>• ${esc(x)}</div>`).join(''); $('#tgIssues').hidden=!R_.issues.length;
+  $('#tgDl').disabled=!!R_.issues.length;
+  if(!R_.rows.length){ box.innerHTML='<div class="empty">Targets appear here once the scope has reps with bricks.</div>'; return; }
+  // group: RM > DM > MR
+  const byDm=new Map(); R_.rows.forEach(r=>{ const k=r.dm?r.dm.id:'_'; if(!byDm.has(k)) byDm.set(k,[]); byDm.get(k).push(r); });
+  const sumRows=list=>{ const o={total:list.reduce((a,r)=>a+r.total,0),p:{}}; prods.forEach(p=>o.p[p.id]={val:list.reduce((a,r)=>a+r.p[p.id].val,0),units:list.reduce((a,r)=>a+r.p[p.id].units,0)}); return o; };
+  const head=`<tr><th>Level</th><th>Name</th><th class="r">Geo share in scope</th>${prods.map(p=>`<th class="r">${multi?esc(p.n)+' ':''}Target value</th>${units?`<th class="r">${multi?esc(p.n)+' ':''}Units</th>`:''}`).join('')}${multi?'<th class="r">Total value</th>':''}<th class="r">% of target</th></tr>`;
+  const cells=(o,share)=>`${prods.map(p=>`<td class="r num">${fmt0(o.p[p.id].val)}</td>${units?`<td class="r num">${fmt0(o.p[p.id].units)}</td>`:''}`).join('')}${multi?`<td class="r num"><b>${fmt0(o.total)}</b></td>`:''}<td class="r num">${grand?f2(o.total/grand*100):'0.00'}%</td>`;
+  let body='';
+  const rms=new Map(); [...byDm.keys()].forEach(k=>{ const d=P(k); const r=d&&P(d.parent); const rk=r?r.id:'_'; if(!rms.has(rk)) rms.set(rk,[]); rms.get(rk).push(k); });
+  rms.forEach((dmKeys,rk)=>{ const rm=P(rk); const all=dmKeys.flatMap(k=>byDm.get(k));
+    if(rm) body+=`<tr class="grp-rm"><td><span class="role rm">RM</span></td><td>${esc(rm.name)}</td><td class="r num">${f2(all.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(all))}</tr>`;
+    dmKeys.forEach(k=>{ const d=P(k); const list=byDm.get(k);
+      if(d) body+=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${esc(d.name)}</td><td class="r num">${f2(list.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(list))}</tr>`;
+      list.forEach(r=>body+=`<tr><td><span class="role mr">MR</span></td><td>${esc(r.rep.name)}</td><td class="r num">${f2(r.geoSh*100)}%</td>${cells(r)}</tr>`); }); });
+  body+=`<tr class="grp-rm"><td></td><td><b>Total</b></td><td class="r num">100.00%</td>${cells(sumRows(R_.rows))}</tr>`;
+  box.innerHTML=`<div class="tbl-wrap" style="max-height:60vh"><table>${'<thead>'+head+'</thead><tbody>'+body+'</tbody>'}</table></div>`;
+}
+// events
+$('#tgScope').onchange=e=>{ T().scope=e.target.value; renderTgt(); };
+document.querySelectorAll('input[name="tgMode"]').forEach(r=>r.onchange=e=>{ T().mode=e.target.value; renderTgt(); save(); });
+$('#tgTotal').oninput=e=>{ T().total=e.target.value; renderTgtResult(); save(); };
+$('#tgAddProd').onclick=()=>{ const t=T(); const id='p'+Date.now().toString(36); t.products.push({id,n:`Product ${t.products.length+1}`,price:'',units:'',w:{...t.w}}); renderTgt(); save(); };
+$('#tgProdRows').addEventListener('input',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const p=T().products[+tr.dataset.i]; p[e.target.dataset.pf]=e.target.value; tr.querySelector('[data-pv]').textContent=fmt0(num(p.price)*num(p.units)); renderTgtResult(); save(); });
+$('#tgProdRows').addEventListener('change',e=>{ if(e.target.dataset.pf==='n'){ renderTgtWeights(); renderTgtData(); renderTgtResult(); } });
+$('#tgProdRows').addEventListener('click',e=>{ const b=e.target.closest('[data-prm]'); if(!b) return; const t=T(); const p=t.products.splice(+b.dataset.prm,1)[0]; delete t.data[p.id]; renderTgt(); save(); });
+$('#tgSame').onchange=e=>{ const t=T(); t.sameW=e.target.checked; if(!t.sameW) t.products.forEach(p=>p.w={...t.w}); renderTgt(); save(); };
+$('#tgWeights').addEventListener('input',e=>{ const row=e.target.closest('[data-wk]'); if(!row) return; const t=T(); const k=row.dataset.wk;
+  const w=k==='all'?t.w:t.products[+k.slice(1)].w; w[e.target.dataset.wf]=num(e.target.value);
+  const s=w.g+w.p+w.c, ok=Math.abs(s-100)<0.01; const el=row.querySelector('[data-wsum]'); el.className='tg-sum '+(ok?'ok':'bad'); el.textContent=ok?'✓ 100%':s+'%';
+  renderTgtResult(); save(); });
+$('#tgWeights').addEventListener('change',()=>{ renderTgtData(); renderTgtResult(); });
+$('#tgDataTbl').addEventListener('input',e=>{ const k=e.target.dataset.d; if(!k) return; const [pid,f,pp]=k.split('|'); const t=T();
+  t.data[pid]=t.data[pid]||{}; t.data[pid][f]=t.data[pid][f]||{}; t.data[pid][f][pp]=e.target.value;
+  const reps=tgScopeReps(); const bricks=tgScopeBricks(reps); const cell=$(`[data-dt="${pid}|${f}"]`); if(cell) cell.innerHTML=`<b>${f2(bricks.reduce((a,b)=>a+dget(pid,f,b),0))}</b>`;
+  renderTgtResult(); save(); });
+
+// factor data template
+$('#tgTpl').onclick=async()=>{
+  if(!needXL()) return; buildUnits(); const prods=tgProducts(); const reps=tgScopeReps(); const bricks=tgScopeBricks(reps);
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Territory data',{views:[{state:'frozen',ySplit:1,xSplit:1}]});
+  const cols=[{header:'70 Brick',width:24},{header:'IMS Region',width:15},{header:'Geo share %',width:12}];
+  prods.forEach(p=>{ cols.push({header:`Potentiality % | ${p.n}`,width:22}); cols.push({header:`Contribution % | ${p.n}`,width:22}); });
+  ws.columns=cols; styleHeader(ws.getRow(1));
+  bricks.forEach(pp=>{ const vals=[pp,BY[KIDS[pp][0]].rg,+brickGeo(pp).toFixed(4)]; prods.forEach(p=>{ vals.push(dget(p.id,'pot',pp)||null); vals.push(dget(p.id,'con',pp)||null); });
+    const r=ws.addRow(vals); r.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; if(i>3){c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; c.numFmt='0.00';} }); r.getCell(3).numFmt='0.00'; });
+  const tr=ws.addRow(['TOTAL','',{formula:`SUM(C2:C${bricks.length+1})`}]); prods.forEach((p,i)=>{ [0,1].forEach(j=>{ const col=4+i*2+j; tr.getCell(col).value={formula:`SUM(${colL(col)}2:${colL(col)}${bricks.length+1})`}; tr.getCell(col).numFmt='0.00'; }); }); tr.font={bold:true};
+  const h=wb.addWorksheet('How to fill'); h.getColumn(1).width=110;
+  ['How to fill the territory data','','Each yellow cell is this brick\'s share of the national total, in %.','Potentiality %: how products similar to yours sell in this brick, out of the national total of those products.','Contribution %: how your own product sold in this brick, out of your company\'s national sales of it.','Leave a column empty if you don\'t use that factor. Keep the brick names and the header row as they are.','Save the file and upload it in Target setting → step 4 → Upload filled data.']
+    .forEach((x,i)=>{const c=h.getCell(i+1,1); c.value=x; if(!i) c.font={bold:true,size:14};});
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Target_Territory_Data_${today()}.xlsx`); toast('Territory data template downloaded.');
+};
+$('#tgUp').onclick=()=>$('#tgUpFile').click();
+$('#tgUpFile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f||!needXL()) return;
+  try{ const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer()); const ws=wb.getWorksheet('Territory data')||wb.worksheets[0];
+    const val=c=>{let v=c&&c.value; if(v&&typeof v==='object') v=('result' in v)?v.result:(v.richText?v.richText.map(t=>t.text).join(''):v.text); return v;};
+    const prods=tgProducts(); const hdr=ws.getRow(1); const map=[];
+    hdr.eachCell((c,col)=>{ const t=String(val(c)||''); const m=t.match(/^(Potentiality|Contribution)\s*%\s*\|\s*(.+)$/i); if(!m) return;
+      const p=prods.find(x=>x.n.trim().toLowerCase()===m[2].trim().toLowerCase()); if(p) map.push({col,pid:p.id,f:m[1].toLowerCase().startsWith('pot')?'pot':'con'}); });
+    if(!map.length){ toast('No “Potentiality % | product” or “Contribution % | product” columns matched your products. Download the template again.',5000); return; }
+    let n=0; const t=T();
+    for(let r=2;r<=ws.rowCount;r++){ const row=ws.getRow(r); const pp=String(val(row.getCell(1))||'').trim(); if(!KIDS[pp]) continue;
+      map.forEach(m=>{ const v=val(row.getCell(m.col)); if(v===null||v===undefined||v==='') return; t.data[m.pid]=t.data[m.pid]||{}; t.data[m.pid][m.f]=t.data[m.pid][m.f]||{}; t.data[m.pid][m.f][pp]=String(num(v)); n++; }); }
+    renderTgt(); save(); toast(`Territory data loaded: ${n} values.`);
+  }catch(err){ toast('That file could not be read. Use the template from step 4.',4000); }
+};
+
+// dynamic target workbook
+const colL=n=>{ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
+$('#tgDl').onclick=async()=>{
+  if(!needXL()) return; const R_=tgCompute(); if(R_.issues.length) return;
+  const t=T(); const prods=R_.prods; const np=prods.length; const isP=t.mode==='products';
+  const uniq=(list,key)=>{ const seen={}; list.forEach(o=>{ const b=o[key]; seen[b]=(seen[b]||0)+1; if(seen[b]>1) o[key]=`${b} (${seen[b]})`; }); };
+  const reps=R_.rows.map(r=>({id:r.rep.id,name:r.rep.name,dm:r.dm?r.dm.name:'',rm:(r.dm&&P(r.dm.parent))?P(r.dm.parent).name:''})); uniq(reps,'name');
+  const scopeNode=P(t.scope); const scopeName=scopeNode?`${scopeNode.role==='DM'?'District':'Regional'}: ${scopeNode.name}`:'Whole structure';
+  const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder'; const img=await logoId(wb);
+  // Summary
+  const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
+  sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12}];
+  await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,8);
+  const hr=sm.getRow(5); hr.values=['Product','Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check']; styleHeader(hr);
+  prods.forEach((p,i)=>{ const r=6+i; const row=sm.getRow(r);
+    row.values=[p.n,isP?p.price:null,isP?p.units:null,isP?{formula:`B${r}*C${r}`}:p.value,p.w.g,p.w.p,p.w.c,{formula:`E${r}+F${r}+G${r}`}];
+    row.eachCell({includeEmpty:true},(c,col)=>{ if(col>8) return; c.border=BORDER; if((isP&&(col===2||col===3))||(!isP&&col===4)||col>=5&&col<=7) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; });
+    row.getCell(4).numFmt='#,##0'; row.getCell(2).numFmt='#,##0.00'; row.getCell(3).numFmt='#,##0'; });
+  const totR=6+np; sm.getRow(totR).values=['TOTAL TARGET','','',{formula:`SUM(D6:D${totR-1})`}]; sm.getRow(totR).font={bold:true}; sm.getCell(totR,4).numFmt='#,##0';
+  for(let c=1;c<=8;c++) sm.getCell(totR,c).border=BORDER;
+  const SROW=i=>6+i; // product i row on Summary
+  // hierarchy summary rows later (after Rep calc columns are known)
+  // Brick data
+  const bd=wb.addWorksheet('Brick data',{views:[{state:'frozen',ySplit:1,xSplit:1}]});
+  const bcols=[{header:'70 Brick',width:24},{header:'IMS Region',width:15},{header:'Geo share %',width:12}];
+  prods.forEach(p=>{ bcols.push({header:`Potentiality % | ${p.n}`,width:22}); bcols.push({header:`Contribution % | ${p.n}`,width:22}); });
+  bd.columns=bcols; styleHeader(bd.getRow(1));
+  R_.bricks.forEach(pp=>{ const v=[pp,BY[KIDS[pp][0]].rg,+brickGeo(pp).toFixed(6)]; prods.forEach(p=>{ v.push(dget(p.id,'pot',pp)); v.push(dget(p.id,'con',pp)); });
+    const r=bd.addRow(v); r.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=3){ c.numFmt='0.00'; } if(i>3) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; }); });
+  const BDL=R_.bricks.length+1; const bdRange=`'Brick data'!$A$2:$${colL(3+2*np)}$${BDL}`;
+  // Brick owners
+  const bo=wb.addWorksheet('Brick owners',{views:[{state:'frozen',ySplit:1}]});
+  const ocols=[{header:'Medical rep',width:26},{header:'District manager',width:24},{header:'Regional manager',width:24},{header:'70 Brick',width:22},{header:'148 Brick',width:24},{header:'Area',width:18},{header:'Piece geo share %',width:14},{header:'Share of 70 brick',width:14},{header:'Geo share %',width:12}];
+  prods.forEach(p=>{ ocols.push({header:`Potentiality | ${p.n}`,width:18}); ocols.push({header:`Contribution | ${p.n}`,width:18}); });
+  bo.columns=ocols; styleHeader(bo.getRow(1));
+  const repById=Object.fromEntries(reps.map(r=>[r.id,r]));
+  UNITS.filter(u=>repById[S.assign[u.id]]).forEach(u=>{ const rp=repById[S.assign[u.id]]; const r=bo.rowCount+1;
+    const v=[rp.name,rp.dm,rp.rm,u.p,u.n,u.area||'',+u.s.toFixed(6),{formula:`IFERROR(G${r}/VLOOKUP(D${r},${bdRange},3,FALSE),0)`},{formula:`G${r}`}];
+    prods.forEach((p,i)=>{ v.push({formula:`H${r}*VLOOKUP(D${r},${bdRange},${4+i*2},FALSE)`}); v.push({formula:`H${r}*VLOOKUP(D${r},${bdRange},${5+i*2},FALSE)`}); });
+    const row=bo.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=7) c.numFmt=i===8?'0.0%':'0.0000'; }); });
+  const BOL=bo.rowCount; const boCol=(c)=>`'Brick owners'!$${c}$2:$${c}$${BOL}`;
+  // Rep calculation
+  const rc=wb.addWorksheet('Rep calculation',{views:[{state:'frozen',ySplit:1,xSplit:1}]});
+  const rcols=[{header:'Medical rep',width:26},{header:'District manager',width:24},{header:'Regional manager',width:24},{header:'Geo share (raw)',width:13},{header:'Geo share in scope',width:13}];
+  const pc=[]; // per product column letters
+  prods.forEach((p,i)=>{ const base=6+i*8; pc.push({potRaw:colL(base),potSh:colL(base+1),conRaw:colL(base+2),conSh:colL(base+3),idx:colL(base+4),val:colL(base+5),units:colL(base+6),pct:colL(base+7)});
+    rcols.push({header:`Potentiality (raw) | ${p.n}`,width:14},{header:`Potentiality share | ${p.n}`,width:14},{header:`Contribution (raw) | ${p.n}`,width:14},{header:`Contribution share | ${p.n}`,width:14},{header:`Weighted share | ${p.n}`,width:14},{header:`Target value | ${p.n}`,width:16},{header:`Target units | ${p.n}`,width:14},{header:`% of product target | ${p.n}`,width:14}); });
+  const totalCol=colL(6+np*8); rcols.push({header:'Total target value',width:18});
+  rc.columns=rcols; styleHeader(rc.getRow(1));
+  const RL=reps.length+1;
+  reps.forEach((rp,k)=>{ const r=k+2; const v=[rp.name,rp.dm,rp.rm,{formula:`SUMIF(${boCol('A')},A${r},${boCol('I')})`},{formula:`IF(SUM($D$2:$D$${RL})=0,0,D${r}/SUM($D$2:$D$${RL}))`}];
+    prods.forEach((p,i)=>{ const c=pc[i], s=SROW(i), potC=colL(10+i*2), conC=colL(11+i*2);
+      v.push({formula:`SUMIF(${boCol('A')},A${r},${boCol(potC)})`},{formula:`IF(SUM($${c.potRaw}$2:$${c.potRaw}$${RL})=0,0,${c.potRaw}${r}/SUM($${c.potRaw}$2:$${c.potRaw}$${RL}))`},
+        {formula:`SUMIF(${boCol('A')},A${r},${boCol(conC)})`},{formula:`IF(SUM($${c.conRaw}$2:$${c.conRaw}$${RL})=0,0,${c.conRaw}${r}/SUM($${c.conRaw}$2:$${c.conRaw}$${RL}))`},
+        {formula:`(Summary!$E$${s}*E${r}+Summary!$F$${s}*${c.potSh}${r}+Summary!$G$${s}*${c.conSh}${r})/100`},
+        {formula:`Summary!$D$${s}*${c.idx}${r}`},{formula:`IF(Summary!$B$${s}>0,${c.val}${r}/Summary!$B$${s},"")`},{formula:`IF(Summary!$D$${s}=0,0,${c.val}${r}/Summary!$D$${s})`}); });
+    v.push({formula:prods.map((p,i)=>`${pc[i].val}${r}`).join('+')});
+    const row=rc.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=4){ const L=colL(i); const isVal=pc.some(x=>x.val===L)||L===totalCol; const isU=pc.some(x=>x.units===L); c.numFmt=isVal||isU?'#,##0':(i===4||pc.some(x=>x.potRaw===L||x.conRaw===L)?'0.0000':'0.00%'); } }); });
+  const tr=rc.addRow(['TOTAL']); tr.font={bold:true}; for(let i=4;i<=6+np*8;i++){ const L=colL(i); tr.getCell(i).value={formula:`SUM(${L}2:${L}${RL})`}; tr.getCell(i).border=BORDER; const isVal=pc.some(x=>x.val===L)||L===totalCol; tr.getCell(i).numFmt=isVal||pc.some(x=>x.units===L)?'#,##0':(i===4||pc.some(x=>x.potRaw===L||x.conRaw===L)?'0.0000':'0.00%'); }
+  // Targets (clean)
+  const tg=wb.addWorksheet('Targets',{views:[{state:'frozen',ySplit:5,showGridLines:false}]});
+  const tcols=[{width:9},{width:30},{width:26}]; prods.forEach(()=>{ tcols.push({width:16}); if(isP) tcols.push({width:12}); }); tcols.push({width:18},{width:12}); tg.columns=tcols;
+  const lastC=3+np*(isP?2:1)+2;
+  await titleBlock(tg,wb,img,'Targets by person',`${scopeName} · total target ${fmt0(prods.reduce((a,p)=>a+p.value,0))} · formulas link to Rep calculation and Summary`,lastC);
+  const th=['Level','Name','Reports to']; prods.forEach(p=>{ th.push(np>1?`${p.n} value`:'Target value'); if(isP) th.push(np>1?`${p.n} units`:'Target units'); }); th.push('Total value','% of target');
+  tg.getRow(5).values=th; styleHeader(tg.getRow(5));
+  const rcR=name=>reps.findIndex(r=>r.name===name)+2;
+  const line=(level,name,parent,how)=>{ const r=tg.rowCount+1; const v=[level,name,parent]; prods.forEach((p,i)=>{ v.push({formula:how(pc[i].val)}); if(isP) v.push({formula:how(pc[i].units)}); });
+    const firstV=4, lastV=3+np*(isP?2:1); const valCells=[]; for(let c=firstV;c<=lastV;c+=isP?2:1) valCells.push(colL(c)+r);
+    v.push({formula:valCells.join('+')},{formula:`IF('Rep calculation'!$${totalCol}$${RL+1}=0,0,${colL(lastV+1)}${r}/'Rep calculation'!$${totalCol}$${RL+1})`});
+    const row=tg.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=4) c.numFmt=i===lastV+2?'0.00%':'#,##0'; });
+    if(level==='RM'){ row.eachCell({includeEmpty:true},c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.rmBg}}); row.font={bold:true,color:{argb:XC.rm}}; }
+    if(level==='DM'){ row.eachCell({includeEmpty:true},c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.dmBg}}); row.font={bold:true,color:{argb:XC.dm}}; }
+    if(level==='MR') row.getCell(1).font={bold:true,color:{argb:XC.mr}};
+    return r; };
+  const rcCol=L=>`'Rep calculation'!$${L}$2:$${L}$${RL}`;
+  const rmNames=[...new Set(reps.map(r=>r.rm))];
+  rmNames.forEach(rm=>{ if(rm) line('RM',rm,'',L=>`SUMIF(${rcCol('C')},"${rm.replace(/"/g,'""')}",${rcCol(L)})`);
+    [...new Set(reps.filter(r=>r.rm===rm).map(r=>r.dm))].forEach(dm=>{ if(dm) line('DM',dm,rm,L=>`SUMIF(${rcCol('B')},"${dm.replace(/"/g,'""')}",${rcCol(L)})`);
+      reps.filter(r=>r.rm===rm&&r.dm===dm).forEach(rp=>line('MR',rp.name,dm,L=>`IF('Rep calculation'!${L}${rcR(rp.name)}="","",'Rep calculation'!${L}${rcR(rp.name)})`)); }); });
+  const gt=tg.rowCount+1; const gv=['','TOTAL','']; prods.forEach((p,i)=>{ gv.push({formula:`'Rep calculation'!${pc[i].val}${RL+1}`}); if(isP) gv.push({formula:`'Rep calculation'!${pc[i].units}${RL+1}`}); });
+  gv.push({formula:`'Rep calculation'!${totalCol}${RL+1}`},1); const gr=tg.addRow(gv); gr.font={bold:true}; gr.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE3E8E5'}}; if(i>=4) c.numFmt=i===lastC?'0.00%':'#,##0';});
+  // Summary: check line
+  const ck=totR+2; sm.getCell(ck,1).value='Check: sum of all reps'; sm.getCell(ck,4).value={formula:`'Rep calculation'!${totalCol}${RL+1}`}; sm.getCell(ck,4).numFmt='#,##0'; sm.getCell(ck,1).font={italic:true,color:{argb:'FF5B6B64'}};
+  sm.getCell(ck+2,1).value='How it works'; sm.getCell(ck+2,1).font={bold:true};
+  ['Each rep\'s weighted share = Geo weight × rep\'s geo share + Potentiality weight × rep\'s potentiality share + Contribution weight × rep\'s contribution share (all within this scope).','A rep\'s potentiality and contribution come from the bricks they cover (sheet “Brick data”); a part brick counts by its share of the brick\'s geo share.','Rep target = product target value × weighted share. Managers = sum of their reps. Change any yellow cell to recalculate.']
+    .forEach((x,i)=>{ sm.mergeCells(ck+3+i,1,ck+3+i,8); const c=sm.getCell(ck+3+i,1); c.value=x; c.alignment={wrapText:true,vertical:'top'}; sm.getRow(ck+3+i).height=30; });
+  wb.views=[{activeTab:wb.worksheets.indexOf(tg)}];
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Targets_${scopeName.replace(/[^A-Za-z0-9]+/g,'_')}_${today()}.xlsx`); toast('Target sheet downloaded.'); sendCopy('Target sheet');
+};
 
 // ---------- drag & drop ----------
 let drag=null;
