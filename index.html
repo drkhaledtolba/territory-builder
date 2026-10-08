@@ -83,6 +83,7 @@ h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;letter-s
 .pool-level .seg{flex:1 1 170px}
 .pool-level .seg button{flex:1;justify-content:center;white-space:nowrap}
 .pool-head h2{font-family:var(--f-display);font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pool-head select{font-size:13px;padding-inline:6px!important;min-width:0}
 .pool-head input[type=search],.pool-head select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
 .pool-body{overflow:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:10px;min-height:120px}
 .pool.drop-ok{outline:2px dashed var(--accent);outline-offset:-4px}
@@ -210,6 +211,17 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
 
+.build{border-color:var(--ink);font-weight:600}
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:560px){.mode-cards{grid-template-columns:1fr}}
+.mode-card{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;background:var(--bg)}
+.mode-card:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.mode-card input{accent-color:var(--accent);margin-top:3px}
+.mode-card b{display:block;margin-bottom:2px}
+.mode-card span{font-size:12.5px;color:var(--muted)}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.counts label{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.counts input{font-family:var(--f-mono);font-size:22px;border:0;background:transparent;width:100%;padding:0}
 /* split editor */
 .sp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .sp-share{font-family:var(--f-mono);font-size:22px;font-weight:500}
@@ -283,7 +295,7 @@ footer.foot img{width:84px;height:84px;display:block}
         <input type="search" id="q" placeholder="Search brick or area (English / عربي)">
         <div class="row" style="gap:6px;flex-wrap:nowrap">
           <select id="srt" aria-label="Sort bricks"><option value="ims">IMS brick order</option><option value="share">Geo share, high to low</option><option value="az">Name A–Z</option></select>
-          <select id="grp" aria-label="Group bricks"><option value="">No grouping</option><option value="rg">Group by IMS region</option></select>
+          <select id="grp" aria-label="Group bricks"><option value="rg" selected>Group by IMS region</option><option value="">No grouping</option></select>
         </div>
         <div class="legend">Click a brick to assign it or split it into areas. Drag it onto a rep. Shift-click to pick several. Drop here to unassign.</div>
       </div>
@@ -295,6 +307,8 @@ footer.foot img{width:84px;height:84px;display:block}
         <button id="addMR" class="primary">+ Medical rep</button>
         <button id="addDM"><span class="dot dm"></span>+ District manager</button>
         <button id="addRM"><span class="dot rm"></span>+ Regional manager</button>
+        <span class="spacer"></span>
+        <button id="addFull" class="build">Build full structure…</button>
       </div>
       <section class="board" id="board"></section>
     </section>
@@ -357,6 +371,25 @@ footer.foot img{width:84px;height:84px;display:block}
     <div class="opt"><button id="xOpen">Open file</button><span class="t">Open a saved structure</span><span class="d">Loads a structure file you saved before. It replaces the current board.</span><input type="file" id="openFile" accept=".json,.txt" hidden></div>
     <textarea id="linkBox" readonly hidden aria-label="Share link"></textarea>
     <div class="row"><span class="sub">Your work also saves automatically in this browser.</span><span class="spacer"></span><button id="xClear" class="danger">Clear board</button></div>
+  </div>
+</div>
+
+<!-- Build full structure -->
+<div class="modal" id="mBuild" hidden>
+  <div class="box" role="dialog" aria-labelledby="bTitle">
+    <div class="row" style="justify-content:space-between"><h3 id="bTitle">Build full structure</h3><button class="ghost" data-close="mBuild">Close ✕</button></div>
+    <div class="counts">
+      <label><span class="lbl"><span class="dot rm"></span> Regional managers</span><input id="bRM" type="number" min="0" max="50" value="3"></label>
+      <label><span class="lbl"><span class="dot dm"></span> District managers</span><input id="bDM" type="number" min="0" max="100" value="10"></label>
+      <label><span class="lbl"><span class="dot mr"></span> Medical reps</span><input id="bMR" type="number" min="0" max="200" value="30"></label>
+    </div>
+    <div class="mode-cards">
+      <label class="mode-card"><input type="radio" name="bmode" value="equal" checked><div><b>Empty structure, split equally</b><span>Creates the slots and spreads them evenly: DMs across RMs, reps across DMs. You assign the bricks yourself.</span></div></label>
+      <label class="mode-card"><input type="radio" name="bmode" value="geo"><div><b>Fill by geography & geo share</b><span>Shares out all 148 bricks so reps get similar geo share. Neighbouring bricks stay together, and a district never mixes areas that are far apart, like Cairo with Alexandria.</span></div></label>
+    </div>
+    <div id="bPrev"></div>
+    <div class="how" id="bWarn" hidden>This replaces the people and assignments on your current board. Area splits and your own geo share are kept. Save a file first if you want to keep the current board.</div>
+    <div class="row" style="justify-content:flex-end"><button data-close="mBuild">Cancel</button><button id="bGo" class="primary">Build structure</button></div>
   </div>
 </div>
 
@@ -552,7 +585,7 @@ function mrHTML(p,m,t){
     <div class="blk-head">
       <span class="handle" draggable="true" data-drag-person="${p.id}" title="Drag to move this rep to another district manager">⋮⋮</span>
       <span class="role mr">MR</span>
-      <input class="name" value="${esc(p.name)}" data-rename="${p.id}" aria-label="Rep name">
+      <input class="name" value="${esc(p.name)}" title="${esc(p.name)}" data-rename="${p.id}" aria-label="Rep name">
       <button class="ghost" data-del="${p.id}" title="Remove this rep">✕</button>
       <span class="mr-stats"><span class="share">${f2(x.share)}%</span>${pill(x.share,t)}<span class="sub" style="font-size:11px">${x.bricks.size} bricks</span><span class="spacer"></span><button class="ghost place" data-place="${p.id}">Place here</button></span>
     </div>
@@ -568,7 +601,7 @@ function dmHTML(d,m,t,dmT){
     <div class="blk-head">
       <span class="handle" draggable="true" data-drag-person="${d.id}" title="Drag to move this district manager to another regional manager">⋮⋮</span>
       <span class="role dm">DM</span>
-      <input class="name" value="${esc(d.name)}" data-rename="${d.id}" aria-label="District manager name">
+      <input class="name" value="${esc(d.name)}" title="${esc(d.name)}" data-rename="${d.id}" aria-label="District manager name">
       <button class="ghost" data-del="${d.id}" title="Remove this district manager">✕</button>
     </div>
     <div class="blk-head" style="padding-top:0"><span class="meta"><b>${f2(x.share)}%</b>${pill(x.share,dmT)}<span>${x.mrs} reps</span><span>avg ${x.mrs?f2(x.share/x.mrs):'—'}%/rep</span></span></div>
@@ -966,6 +999,126 @@ function readHash(){
 const clearHash=()=>history.replaceState(null,'',location.pathname+location.search);
 $('#keepShared').onclick=()=>{ sharedView=false; save(); clearHash(); render(); toast('This structure is now your board.'); };
 $('#leaveShared').onclick=()=>{ sharedView=false; clearHash(); S=load(); render(); toast('Back to your own board.'); };
+
+// ---------- full structure builder ----------
+// Governorate of each 70 brick, and geographic zones in travel order. A district manager never spans zones
+// unless there are fewer DMs than zones, and then only neighbouring zones are merged.
+const GOV_OF=p=>{
+  if(/^(ALEX|A\.WEST)/.test(p)) return 'Alexandria'; if(/^BEHERA/.test(p)) return 'Behera';
+  if(/^KAFR EL SHEIKH/.test(p)) return 'Kafr El Sheikh'; if(/^GHARBIA/.test(p)) return 'Gharbia';
+  if(/^MENOFIA/.test(p)) return 'Menofia'; if(/^KALUBIA/.test(p)) return 'Kalubia';
+  if(/^DAKAHLIA/.test(p)) return 'Dakahlia'; if(/^DOMIAT/.test(p)) return 'Damietta';
+  if(/^PORT SAID/.test(p)) return 'Port Said'; if(/^ISMAELIA/.test(p)) return 'Ismailia';
+  if(/^SUEZ/.test(p)) return 'Suez'; if(/^SHARKIA/.test(p)) return 'Sharkia';
+  if(/^(GUIZA|IMBABA|FAISAL|EL HARAM)/.test(p)) return 'Giza';
+  if(/^FAYOUM/.test(p)) return 'Fayoum'; if(/^BANI SUIF/.test(p)) return 'Bani Suif'; if(/^EL MENYA/.test(p)) return 'Menya';
+  if(/^ASSIUT/.test(p)) return 'Assiut'; if(/^SOHAG/.test(p)) return 'Sohag'; if(/^QUENA/.test(p)) return 'Quena'; if(/^ASWAN/.test(p)) return 'Aswan';
+  return 'Cairo';
+};
+const ZONES=[
+  {name:'Alexandria & West Delta',short:'Alex & Behera',govs:['Alexandria','Behera']},
+  {name:'Middle Delta',short:'Middle Delta',govs:['Kalubia','Menofia','Gharbia','Kafr El Sheikh']},
+  {name:'East Delta & Canal',short:'East Delta & Canal',govs:['Dakahlia','Damietta','Port Said','Ismailia','Suez','Sharkia']},
+  {name:'Greater Cairo',short:'Greater Cairo',govs:['Cairo','Giza']},
+  {name:'Upper Egypt',short:'Upper Egypt',govs:['Fayoum','Bani Suif','Menya','Assiut','Sohag','Quena','Aswan']}
+];
+// Contiguous balanced partition (DP): split ordered items into k groups with share close to equal; pen(i) = cost of cutting before item i.
+function partition(items,k,pen){
+  const n=items.length; k=Math.max(1,Math.min(k,n));
+  const P=[0]; items.forEach(it=>P.push(P[P.length-1]+it.s)); const T=P[n]/k;
+  const INF=1e18; const dp=Array.from({length:k+1},()=>new Float64Array(n+1).fill(INF)); const from=Array.from({length:k+1},()=>new Int32Array(n+1));
+  dp[0][0]=0;
+  for(let j=1;j<=k;j++) for(let i=j;i<=n-(k-j);i++){ let best=INF,arg=j-1;
+    for(let a=j-1;a<i;a++){ if(dp[j-1][a]>=INF) continue; const d=P[i]-P[a]-T; const c=dp[j-1][a]+d*d+(j>1?pen(a)*T*T:0); if(c<best){best=c;arg=a;} }
+    dp[j][i]=best; from[j][i]=arg; }
+  const cuts=[]; let i=n; for(let j=k;j>=1;j--){ const a=from[j][i]; cuts.unshift([a,i]); i=a; }
+  return cuts.map(([a,b])=>items.slice(a,b));
+}
+function apportion(weights,total,minEach){
+  const W=weights.reduce((a,b)=>a+b,0); const n=weights.length; const base=weights.map(()=>minEach); let left=total-minEach*n;
+  if(left<0) return null;
+  const raw=weights.map(w=>w/W*left); const fl=raw.map(Math.floor); let rest=left-fl.reduce((a,b)=>a+b,0);
+  const order=raw.map((r,i)=>[r-fl[i],i]).sort((a,b)=>b[0]-a[0]); order.slice(0,rest).forEach(([,i])=>fl[i]++);
+  return base.map((b,i)=>b+fl[i]);
+}
+const sumS=list=>list.reduce((a,u)=>a+u.s,0);
+function topNames(list,keyFn,max){
+  const g={}; list.forEach(u=>{const k=keyFn(u); g[k]=(g[k]||0)+u.s;}); const tot=sumS(list);
+  const arr=Object.entries(g).sort((a,b)=>b[1]-a[1]); const keep=arr.filter((x,i)=>i===0||x[1]>=tot*0.2).slice(0,max).map(x=>x[0]);
+  const title=s=>s.toLowerCase().replace(/\b([a-z])/g,c=>c.toUpperCase()).replace(/\bIi\b/g,'II').replace(/\bIii\b/g,'III').replace(/\bIv\b/g,'IV').replace(/\bN\.sinai\b/i,'N. Sinai');
+  return keep.map(title).join(' & ')+(arr.length>keep.length?' +':'');
+}
+function planGeo(nRM,nDM,nMR){
+  buildUnits();
+  const ordered=[]; ZONES.forEach((z,zi)=>z.govs.forEach(g=>UNITS.forEach(u=>{ if(GOV_OF(u.p)===g){ ordered.push(Object.assign({},u,{gov:g,zi})); } })));
+  const zoneUnits=ZONES.map((z,zi)=>ordered.filter(u=>u.zi===zi));
+  // 1. zones -> DM groups
+  let groups=[]; // {units, dms}
+  if(nDM>=ZONES.length){ const per=apportion(zoneUnits.map(sumS),nDM,1); zoneUnits.forEach((us,i)=>groups.push({units:us,dms:per[i]})); }
+  else { const zs=zoneUnits.map((us,i)=>({s:sumS(us),us})); partition(zs,nDM,()=>0).forEach(g=>groups.push({units:g.flatMap(z=>z.us),dms:1})); }
+  // 2. DM territories
+  const dmTerr=[];
+  groups.forEach(g=>{ const parts=partition(g.units,g.dms,a=>{ const x=g.units[a-1], y=g.units[a]; if(!x||!y) return 0; return x.p===y.p?1.2:(x.gov===y.gov?0.25:0); }); parts.forEach(p=>dmTerr.push(p)); });
+  // 3. reps per DM, then rep territories
+  const mrPer=apportion(dmTerr.map(sumS),nMR,1);
+  const dms=dmTerr.map((units,i)=>{ const reps=partition(units,mrPer[i],a=>{const x=units[a-1],y=units[a]; return x&&y&&x.p===y.p?0.01:0;}); return {units,share:sumS(units),reps}; });
+  // 4. DMs -> RMs (contiguous along the zone path)
+  const rms=nRM?partition(dms.map(d=>({s:d.share,d})),nRM,()=>0).map(g=>g.map(x=>x.d)):[];
+  return {dms,rms};
+}
+function planSummary(plan){
+  const repShares=plan.dms.flatMap(d=>d.reps.map(sumS)); const avg=repShares.reduce((a,b)=>a+b,0)/repShares.length;
+  const cv=Math.sqrt(repShares.reduce((a,b)=>a+(b-avg)**2,0)/repShares.length)/avg*100;
+  return {min:Math.min(...repShares),max:Math.max(...repShares),avg,cv};
+}
+function readCounts(){ const g=id=>Math.max(0,Math.min(200,parseInt($('#'+id).value)||0)); return {rm:g('bRM'),dm:g('bDM'),mr:g('bMR')}; }
+function bMode(){ return document.querySelector('input[name="bmode"]:checked').value; }
+function drawBuild(){
+  const {rm,dm,mr}=readCounts(), mode=bMode(); const out=$('#bPrev'); const btn=$('#bGo');
+  let msg='', ok=true;
+  if(!mr&&!dm&&!rm){ ok=false; msg='<span class="sub">Enter how many people you want at each level.</span>'; }
+  else if(mode==='geo'){
+    if(!mr){ok=false;msg='<span style="color:var(--bad)">Geographic fill needs at least one medical rep.</span>';}
+    else if(dm>mr){ok=false;msg='<span style="color:var(--bad)">Each district manager needs at least one rep. Use more reps or fewer district managers.</span>';}
+    else if(rm>Math.max(dm,1)&&dm){ok=false;msg='<span style="color:var(--bad)">Each regional manager needs at least one district manager.</span>';}
+    else if(!dm&&rm){ok=false;msg='<span style="color:var(--bad)">Add district managers to place under the regional managers.</span>';}
+    else if(mr>UNITS.length){ok=false;msg=`<span style="color:var(--bad)">There are only ${UNITS.length} pieces to share out. Use fewer reps or split bricks into areas first.</span>`;}
+    else{
+      const plan=planGeo(rm,dm||1,mr); const s=planSummary(plan);
+      const rows=plan.dms.map((d,i)=>`<tr><td>${dm?esc('DM – '+topNames(d.units,u=>u.gov,3)):'All reps'}</td><td class="r num">${f2(d.share)}</td><td class="r num">${d.reps.length}</td><td class="r num">${f2(d.share/d.reps.length)}</td></tr>`).join('');
+      msg=`<div class="row" style="gap:16px;margin-bottom:6px"><span>Rep share <b class="num">${f2(s.min)}–${f2(s.max)}%</b></span><span>Average <b class="num">${f2(s.avg)}%</b></span><span>Spread <b class="num">${s.cv.toFixed(0)}% CV</b></span></div>
+        <div class="tbl-wrap" style="max-height:220px"><table><thead><tr><th>District</th><th class="r">Geo share %</th><th class="r">Reps</th><th class="r">Avg / rep</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+  } else {
+    msg=`<span class="sub">Creates ${rm} regional, ${dm} district and ${mr} rep slots. ${dm&&rm?`About ${(dm/rm).toFixed(1)} DMs per RM. `:''}${mr&&dm?`About ${(mr/dm).toFixed(1)} reps per DM. `:''}No bricks are assigned, so you fill them yourself.</span>`;
+  }
+  out.innerHTML=msg; btn.disabled=!ok;
+  $('#bWarn').hidden=!S.people.length;
+}
+function buildStructure(){
+  const {rm,dm,mr}=readCounts(), mode=bMode();
+  const keepSplits=S.splits, keepCustom=S.custom, keepMode=S.mode, keepAreas=S.showAreas, keepTarget=S.target;
+  S=blank(); S.splits=keepSplits; S.custom=keepCustom; S.mode=keepMode; S.showAreas=keepAreas; S.target=keepTarget;
+  const mk=(role,name,parent)=>{const p={id:nid(role),role,name,parent:parent||null}; S.people.push(p); return p;};
+  if(mode==='equal'){
+    const rms=[...Array(rm)].map((_,i)=>mk('RM',`Regional manager ${i+1}`));
+    const dms=[...Array(dm)].map((_,i)=>mk('DM',`District manager ${i+1}`,rms.length?rms[Math.floor(i*rms.length/dm)].id:null));
+    [...Array(mr)].forEach((_,i)=>mk('MR',`Medical rep ${i+1}`,dms.length?dms[Math.floor(i*dms.length/mr)].id:null));
+  } else {
+    const plan=planGeo(rm,dm||1,mr); const rmOf=new Map();
+    plan.rms.forEach((g,i)=>{ const zs=[...new Set(g.flatMap(d=>d.units.map(u=>u.zi)))].sort((a,b)=>a-b); const r=mk('RM',`RM ${i+1} – ${zs.map(z=>ZONES[z].short).join(' · ')}`); g.forEach(d=>rmOf.set(d,r.id)); });
+    let n=0; const dmNames=plan.dms.map(d=>topNames(d.units,u=>u.gov,3)); const seen={};
+    plan.dms.forEach((d,di)=>{ const base=dmNames[di]; const dup=dmNames.filter(x=>x===base).length>1; seen[base]=(seen[base]||0)+1;
+      const dmP=dm?mk('DM',`DM – ${base}${dup?' '+seen[base]:''}`,rmOf.get(d)):null;
+      d.reps.forEach(rep=>{ n++; const m=mk('MR',`MR ${n} – ${topNames(rep,u=>u.p,2)}`,dmP?dmP.id:null); rep.forEach(u=>S.assign[u.id]=m.id); }); });
+  }
+  $('#mBuild').hidden=true; sel.clear(); if(view!=='board') showView('board'); else render();
+  toast(mode==='geo'?`Structure built: ${rm} RM · ${dm} DM · ${mr} reps, with bricks filled by geography and geo share. Rename people and adjust as you like.`:`Empty structure ready: ${rm} RM · ${dm} DM · ${mr} reps. Drag bricks onto the reps to fill it.`,5500);
+}
+$('#addFull').onclick=()=>{ buildUnits(); const c=counts(); if(c.MR||c.DM||c.RM){ $('#bRM').value=c.RM; $('#bDM').value=c.DM; $('#bMR').value=c.MR; } $('#bGo').textContent='Build structure'; $('#mBuild').hidden=false; drawBuild(); };
+['bRM','bDM','bMR'].forEach(i=>$('#'+i).addEventListener('input',drawBuild));
+document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('change',drawBuild));
+$('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
 
 // ---------- drag & drop ----------
 let drag=null;
