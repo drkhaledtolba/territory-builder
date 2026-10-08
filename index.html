@@ -426,10 +426,20 @@ footer.foot img{width:84px;height:84px;display:block}
     <div class="opt"><button id="xExcel" class="primary">Download Excel</button><span class="t">Structure report (Excel)</span><span class="d">A formatted workbook: the full hierarchy with geo share, each rep's bricks and areas, and what's still unassigned.</span></div>
     <div class="opt"><button id="xLink">Copy share link</button><span class="t">Share on the site</span><span class="d">Creates a link that opens this exact structure on the site for anyone you send it to. They can view it and keep their own copy.</span></div>
     <div class="opt"><button id="xFile">Download file</button><span class="t">Save to this device</span><span class="d">Saves a small structure file (.json) you can open again later on any device.</span></div>
+    <div class="opt"><div style="display:flex;flex-direction:column;gap:6px;grid-row:span 2"><button id="xTpl">Download template</button><button id="xImp" class="primary">Upload filled template</button></div><span class="t">Import from Excel</span><span class="d">Bring in a structure you already have. The template lists all 148 bricks; just type the medical rep, district manager and regional manager next to each one. The site checks the file before importing.</span><input type="file" id="impFile" accept=".xlsx" hidden></div>
     <div class="opt"><button id="xOpen">Open file</button><span class="t">Open a saved structure</span><span class="d">Loads a structure file you saved before. It replaces the current board.</span><input type="file" id="openFile" accept=".json,.txt" hidden></div>
     <label class="how" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="sendCopy" checked style="margin-top:3px;accent-color:var(--accent)"><span><b>Help improve the suggestions.</b> When you save, download or share, a copy of your structure (names, bricks and geo share) is sent to Khaled Tolba to build a library of real structures and make the automatic fill better. Untick this if you don't want to send it.</span></label>
     <textarea id="linkBox" readonly hidden aria-label="Share link"></textarea>
     <div class="row"><span class="sub">Your work also saves automatically in this browser.</span><span class="spacer"></span><button id="xClear" class="danger">Clear board</button></div>
+  </div>
+</div>
+
+<!-- Import review -->
+<div class="modal" id="mImp" hidden>
+  <div class="box" role="dialog" aria-labelledby="impTitle">
+    <div class="row" style="justify-content:space-between"><h3 id="impTitle">Import structure</h3><button class="ghost" data-close="mImp">Close ✕</button></div>
+    <div id="impInfo"></div>
+    <div class="row" style="justify-content:flex-end"><button data-close="mImp">Cancel</button><button id="impGo" class="primary">Import structure</button></div>
   </div>
 </div>
 
@@ -1528,6 +1538,103 @@ $('#tgDl').onclick=async()=>{
     .forEach((x,i)=>{ sm.mergeCells(ck+3+i,1,ck+3+i,8); const c=sm.getCell(ck+3+i,1); c.value=x; c.alignment={wrapText:true,vertical:'top'}; sm.getRow(ck+3+i).height=30; });
   wb.views=[{activeTab:wb.worksheets.indexOf(tg)}];
   const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Targets_${scopeName.replace(/[^A-Za-z0-9]+/g,'_')}_${today()}.xlsx`); toast('Target sheet downloaded.'); sendCopy('Target sheet');
+};
+
+// ---------- import structure from Excel ----------
+const normT=s=>String(s==null?'':s).toLowerCase().replace(/[ً-ْ]/g,'').replace(/[^a-z0-9؀-ۿ]+/g,' ').trim();
+function lev(a,b){ if(a===b) return 0; const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+const B148=Object.fromEntries(BASE.map(b=>[normT(b.n),b.id])); const B70=Object.fromEntries(PARENTS.map(p=>[normT(p),p]));
+function closest(v,keys,max=3){ let best=null,bd=1e9; keys.forEach(k=>{ const d=lev(v,k); if(d<bd){bd=d;best=k;} }); return bd<=max?best:null; }
+$('#xTpl').onclick=async()=>{
+  if(!needXL()) return; buildUnits(); const wb=new ExcelJS.Workbook(); const img=await logoId(wb);
+  const ws=wb.addWorksheet('Structure',{views:[{state:'frozen',ySplit:1,xSplit:4}]});
+  ws.columns=[{header:'B#',width:6},{header:'IMS Region',width:14},{header:'70 Brick',width:22},{header:'148 Brick',width:28},{header:'Medical rep',width:28},{header:'District manager',width:28},{header:'Regional manager',width:28}];
+  styleHeader(ws.getRow(1)); ['E1','F1','G1'].forEach(c=>ws.getCell(c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF8A6D1F'}});
+  BASE.forEach(b=>{ // owner of the brick: if split, the rep who holds the biggest area
+    const us=UNITS.filter(u=>u.bid===b.id&&S.assign[u.id]).sort((x,y)=>y.s-x.s); const rep=us.length?P(S.assign[us[0].id]):null; const dm=rep&&P(rep.parent), rm=dm&&P(dm.parent);
+    const r=ws.addRow([b.id,b.rg,b.p,b.n,rep?rep.name:'',dm?dm.name:'',rm?rm.name:'']);
+    r.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=5) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; }); });
+  ws.autoFilter='A1:G1';
+  const h=wb.addWorksheet('How to fill',{views:[{showGridLines:false}]}); h.getColumn(1).width=16; h.getColumn(2).width=100;
+  if(img!==null) h.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}}); [26,20,20,12].forEach((x,i)=>h.getRow(i+1).height=x);
+  h.getCell('B1').value='Import your structure'; h.getCell('B1').font={bold:true,size:16};
+  h.getCell('B2').value='Territory Builder · Khaled Tolba'; h.getCell('B3').value={text:SITE_URL,hyperlink:SITE_URL}; h.getCell('B3').font={underline:true,color:{argb:'FF0F6B5C'}};
+  ['1. Every one of the 148 IMS bricks has a row on the “Structure” tab. Don\'t type brick names: they are already there.','2. Fill the yellow columns: the medical rep who covers the brick, their district manager and regional manager.','3. Write each person\'s name the same way every time (the site ignores capital letters and extra spaces).','4. Leave the medical rep empty for bricks nobody covers yet. You can leave the managers empty too.','5. One rep reports to one district manager, and one district manager to one regional manager.','6. Save the file and upload it on the site: Save, export & share → Import from Excel → Upload filled template.','','Before importing, the site shows what it found and warns about anything that looks wrong, like the same name spelled two ways.']
+    .forEach((x,i)=>{ const c=h.getCell(i+6,2); c.value=x; c.alignment={wrapText:true,vertical:'top'}; });
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Structure_Import_Template_${today()}.xlsx`); toast('Template downloaded. Fill the yellow columns, then upload it.');
+};
+$('#xImp').onclick=()=>$('#impFile').click();
+let IMP=null;
+$('#impFile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f||!needXL()) return;
+  try{
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer());
+    const val=c=>{ let v=c&&c.value; if(v&&typeof v==='object') v=('result' in v)?v.result:(v.richText?v.richText.map(t=>t.text).join(''):v.text); return v==null?'':String(v).trim(); };
+    // find the header row and columns, tolerant to wording
+    let ws=null, hr=0, col={};
+    for(const w of [wb.getWorksheet('Structure'),...wb.worksheets].filter(Boolean)){
+      for(let r=1;r<=Math.min(10,w.rowCount);r++){ const c={}; w.getRow(r).eachCell((cell,ci)=>{ const t=normT(val(cell));
+          if(/^b ?$/.test(t)||t==='b'||t==='brick no'||t==='b no'||val(cell).trim().toLowerCase()==='b#') c.id=ci;
+          else if(/148/.test(t)) c.b148=ci; else if(/70/.test(t)) c.b70=ci;
+          else if(/(medical )?rep|mr\b|representative|مندوب/.test(t)) c.mr=ci;
+          else if(/district|dm\b|مدير منطقة/.test(t)) c.dm=ci; else if(/regional|rm\b|region manager|مدير اقليم/.test(t)) c.rm=ci; });
+        if(c.mr&&(c.id||c.b148||c.b70)){ ws=w; hr=r; col=c; break; } }
+      if(ws) break; }
+    if(!ws){ toast('Could not find the brick and “Medical rep” columns. Use the template from this site.',5000); return; }
+    const rows=[], unknown=[];
+    for(let r=hr+1;r<=ws.rowCount;r++){ const row=ws.getRow(r); const g=k=>col[k]?val(row.getCell(col[k])):'';
+      const mr=g('mr'), dm=g('dm'), rm=g('rm'); const idv=g('id'), v148=g('b148'), v70=g('b70');
+      if(!mr&&!dm&&!rm) continue;
+      let bids=null;
+      if(idv&&BY[parseInt(idv)]) bids=[parseInt(idv)];
+      else if(v148&&B148[normT(v148)]) bids=[B148[normT(v148)]];
+      else if(v70&&B70[normT(v70)]) bids=KIDS[B70[normT(v70)]];
+      if(!bids){ const t=normT(v148||v70); const s148=t&&closest(t,Object.keys(B148)), s70=t&&closest(t,Object.keys(B70));
+        unknown.push({r,mr,dm,rm,txt:v148||v70||idv||'(empty)',sug:s148?BY[B148[s148]].n:(s70?B70[s70]:null),bids:s148?[B148[s148]]:(s70?KIDS[B70[s70]]:null)}); continue; }
+      rows.push({r,bids,mr,dm,rm}); }
+    // group names case/space-insensitively
+    const people={MR:new Map(),DM:new Map(),RM:new Map()}; const key=s=>normT(s);
+    const add=(role,name)=>{ if(!name) return; const k=key(name); if(!people[role].has(k)) people[role].set(k,{name,count:0,parents:new Map()}); people[role].get(k).count++; };
+    rows.forEach(x=>{ add('MR',x.mr); add('DM',x.dm); add('RM',x.rm);
+      if(x.mr&&x.dm){ const p=people.MR.get(key(x.mr)).parents; p.set(key(x.dm),(p.get(key(x.dm))||0)+1); }
+      if(x.dm&&x.rm){ const p=people.DM.get(key(x.dm)).parents; p.set(key(x.rm),(p.get(key(x.rm))||0)+1); } });
+    const similar=[]; ['MR','DM','RM'].forEach(role=>{ const ks=[...people[role].keys()]; for(let i=0;i<ks.length;i++) for(let j=i+1;j<ks.length;j++){ const a=ks[i],b=ks[j]; const nums=x=>x.split(' ').filter(t=>/^\d+$|^(i|ii|iii|iv|v|vi)$/.test(t)).join(','); if(nums(a)!==nums(b)) continue; const d=lev(a,b); if(d>0&&d<=2&&Math.min(a.length,b.length)>4&&d<=Math.ceil(Math.min(a.length,b.length)*0.2)) similar.push({role,a:people[role].get(a).name,b:people[role].get(b).name}); } });
+    const conflicts=[]; [['MR','DM'],['DM','RM']].forEach(([role,up])=>people[role].forEach(p=>{ if(p.parents.size>1) conflicts.push({role,name:p.name,ups:[...p.parents.keys()].map(k=>people[up].get(k).name)}); }));
+    const covered=new Set(rows.filter(x=>x.mr).flatMap(x=>x.bids));
+    IMP={rows,people,unknown,file:f.name};
+    const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+    $('#impInfo').innerHTML=`<p><b>${esc(f.name)}</b>: ${rows.length} rows read.</p>
+      <div class="counts" style="margin:6px 0"><label><span class="lbl"><span class="dot rm"></span> Regional</span><span class="num" style="font-size:22px">${people.RM.size}</span></label><label><span class="lbl"><span class="dot dm"></span> District</span><span class="num" style="font-size:22px">${people.DM.size}</span></label><label><span class="lbl"><span class="dot mr"></span> Reps</span><span class="num" style="font-size:22px">${people.MR.size}</span></label></div>
+      <p>${covered.size} of 148 bricks get a rep · ${148-covered.size} stay unassigned.</p>
+      ${unknown.length?`<div class="banner" style="flex-direction:column;align-items:flex-start"><b>${unknown.length===1?'1 row has':unknown.length+' rows have'} a brick the site doesn't know</b><ul style="margin:4px 0 0 18px;padding:0">${li(unknown.slice(0,8).map(u=>`Row ${u.r}: “${esc(u.txt)}”${u.sug?` → did you mean <b>${esc(u.sug)}</b>?`:''}`))}</ul>${unknown.some(u=>u.bids)?'<label class="row" style="gap:6px;margin-top:6px"><input type="checkbox" id="impUseSug" checked> Use the suggested bricks</label>':''}</div>`:''}
+      ${similar.length?`<div class="banner" style="flex-direction:column;align-items:flex-start"><b>${similar.length===1?'1 name pair looks':similar.length+' name pairs look'} like the same person spelled two ways</b><ul style="margin:4px 0 0 18px;padding:0">${li(similar.slice(0,8).map(x=>`${x.role}: “${esc(x.a)}” and “${esc(x.b)}”`))}</ul><label class="row" style="gap:6px;margin-top:6px"><input type="checkbox" id="impMerge"> Treat each pair as one person</label></div>`:''}
+      ${conflicts.length?`<div class="banner" style="flex-direction:column;align-items:flex-start"><b>${conflicts.length===1?'1 person reports':conflicts.length+' people report'} to more than one manager</b><ul style="margin:4px 0 0 18px;padding:0">${li(conflicts.slice(0,8).map(x=>`${x.role} “${esc(x.name)}”: ${x.ups.map(esc).join(', ')}`))}</ul><span class="sub">The site uses the manager that appears most often.</span></div>`:''}
+      ${!unknown.length&&!similar.length&&!conflicts.length?'<p style="color:var(--good)">✓ Everything looks fine.</p>':''}
+      ${S.people.length?'<p class="sub">Importing replaces the people and assignments on your current board. Area splits and your own geo share are kept.</p>':''}`;
+    IMP.similar=similar; $('#mImp').hidden=false; $('#mSave').hidden=true;
+  }catch(err){ console.error(err); toast('That file could not be read. Make sure it is an .xlsx file.',4000); }
+};
+$('#impGo').onclick=()=>{
+  const {rows,unknown,similar}=IMP; const useSug=$('#impUseSug')?$('#impUseSug').checked:false; const merge=$('#impMerge')?$('#impMerge').checked:false;
+  const alias={}; if(merge) similar.forEach(x=>{ alias[x.role+'|'+normT(x.b)]=normT(x.a); });
+  const K=(role,n)=>{ let k=normT(n); while(alias[role+'|'+k]) k=alias[role+'|'+k]; return k; };
+  const all=rows.concat(useSug?unknown.filter(u=>u.bids).map(u=>({r:u.r,bids:u.bids,mr:u.mr,dm:u.dm,rm:u.rm})):[]);
+  // rebuild using majority parents
+  const keepTgt=S.tgt, keepSplits=S.splits, keepCustom=S.custom, keepMode=S.mode, keepAreas=S.showAreas, keepTarget=S.target;
+  S=blank(); Object.assign(S,{tgt:keepTgt,splits:keepSplits,custom:keepCustom,mode:keepMode,showAreas:keepAreas,target:keepTarget});
+  const ppl={MR:new Map(),DM:new Map(),RM:new Map()}; const vote={MR:new Map(),DM:new Map()};
+  const get=(role,name)=>{ const k=K(role,name); if(!ppl[role].has(k)){ const p={id:nid(role),role,name:name.replace(/\s+/g,' ').trim(),parent:null}; ppl[role].set(k,p); S.people.push(p); } return ppl[role].get(k); };
+  const tally=(role,child,up)=>{ const m=vote[role]; if(!m.has(child.id)) m.set(child.id,new Map()); const v=m.get(child.id); v.set(up.id,(v.get(up.id)||0)+1); };
+  buildUnits();
+  all.forEach(x=>{ const mr=x.mr?get('MR',x.mr):null, dm=x.dm?get('DM',x.dm):null, rm=x.rm?get('RM',x.rm):null;
+    if(mr&&dm) tally('MR',mr,dm); if(dm&&rm) tally('DM',dm,rm);
+    if(mr){ x.bids.forEach(bid=>{ UNITS.filter(u=>u.bid===bid).forEach(u=>S.assign[u.id]=mr.id); }); } });
+  ['MR','DM'].forEach(role=>vote[role].forEach((v,id)=>{ const best=[...v.entries()].sort((a,b)=>b[1]-a[1])[0][0]; P(id).parent=best; }));
+  // order people: RM, then DM, then MR as they appeared
+  S.people.sort((a,b)=>['RM','DM','MR'].indexOf(a.role)-['RM','DM','MR'].indexOf(b.role));
+  $('#mImp').hidden=true; sel.clear(); if(view!=='board') showView('board'); else render();
+  const c=counts(); toast(`Structure imported: ${c.RM} RM · ${c.DM} DM · ${c.MR} reps.`,4500);
 };
 
 // ---------- drag & drop ----------
