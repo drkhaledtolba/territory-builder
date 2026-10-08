@@ -231,7 +231,7 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .how b{color:var(--ink)}
 
 footer.foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:24px 90px;color:var(--muted);font-size:12px}
-footer.foot img{width:84px;height:84px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+footer.foot img{width:84px;height:84px;display:block}
 @media (prefers-reduced-motion:no-preference){.chip,.mr,.dm{transition:border-color .12s,background .12s}}
 </style>
 </head>
@@ -333,7 +333,7 @@ footer.foot img{width:84px;height:84px;border-radius:14px;box-shadow:0 2px 10px 
   </section>
 
   <footer class="foot">
-    <img src="logo.png" alt="Khaled Tolba logo" width="84" height="84">
+    <picture><source srcset="logo-light.png" media="(prefers-color-scheme: dark)"><img src="logo.png" alt="Khaled Tolba logo" width="84" height="84"></picture>
     <span>Territory Builder · Khaled Tolba</span>
   </footer>
 </div>
