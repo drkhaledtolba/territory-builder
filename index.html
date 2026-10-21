@@ -418,7 +418,7 @@ footer.foot img{width:84px;height:84px;display:block}
 
 
   <section id="viewTgt" hidden>
-    <div class="how" id="tgDemoBar" style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px"><span><b>New to target setting?</b> Load a demo to see a finished example: 3 products with prices and units, different weights per product, and sample potentiality and contribution data for every brick. The numbers are made up.</span><span class="spacer"></span><button id="tgDemo" class="primary">Load demo target</button></div>
+    <div class="how" id="tgDemoBar" style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px"><span><b>New to target setting?</b> Load a demo to see a finished example: 3 products with prices and units, different weights per product, one shared potentiality and sample contribution data for every brick. The numbers are made up.</span><span class="spacer"></span><button id="tgDemo" class="primary">Load demo target</button></div>
     <div class="tg-grid">
       <div class="tg-card"><div class="tg-h"><span class="tg-step">1</span><h3>Who gets the target</h3><button class="help" data-help="tscope" aria-label="Help">?</button></div>
         <select id="tgScope" class="tg-select" aria-label="Target scope"></select>
@@ -449,6 +449,7 @@ footer.foot img{width:84px;height:84px;display:block}
             <label class="tg-radio"><input type="radio" name="tgDL" value="brick"> 70 brick</label>
             <label class="tg-radio"><input type="radio" name="tgDL" value="mr"> Medical rep</label>
           </div></div>
+        <label class="row" id="tgPotRow" style="gap:8px"><input type="checkbox" id="tgPotSame" style="accent-color:var(--accent)"> Use the same potentiality for all products <button class="help" data-help="potsame" aria-label="Help">?</button></label>
         <div class="sub" id="tgDataNote"></div>
         <div class="row" id="tgDataBtns"><button id="tgTpl">Download data template (Excel)</button><button id="tgUp">Upload filled data</button><input type="file" id="tgUpFile" accept=".xlsx" hidden></div>
         <div class="tbl-wrap" id="tgDataWrap" style="max-height:46vh"><table id="tgDataTbl"></table></div></div>
@@ -1453,8 +1454,18 @@ function tgScopeReps(){
 function tgScopeBricks(reps){ const ids=new Set(reps.map(r=>r.id)); return PARENTS.filter(pp=>UNITS.some(u=>u.p===pp&&ids.has(S.assign[u.id]))); }
 const brickGeo=pp=>UNITS.filter(u=>u.p===pp).reduce((a,u)=>a+u.s,0);
 const byMR=()=>T().dlevel==='mr';
-const mget=(pid,f,rid)=>{ const d=(T().mdata||{})[pid]; return d&&d[f]&&d[f][rid]!=null&&d[f][rid]!==''?num(d[f][rid]):0; };
-const dget=(pid,f,pp)=>{ const d=T().data[pid]; return d&&d[f]&&d[f][pp]!=null&&d[f][pp]!==''?num(d[f][pp]):0; };
+// potentiality: one shared set ('_all') for all products by default, or one per product
+function potSame(){ const t=T(); if(t.potSame===undefined){ const has=o=>Object.entries(o||{}).some(([k,v])=>k!=='_all'&&v&&v.pot&&Object.values(v.pot).some(x=>x!==''&&x!=null)); t.potSame=!(has(t.data)||has(t.mdata)); } return t.potSame; }
+const pk=(pid,f)=>f==='pot'&&potSame()?'_all':pid;
+// columns for potentiality / contribution, for tables and templates
+function dataCols(prods,onlyUsed){
+  const cols=[]; const multi=prods.length>1; const same=potSame();
+  if(same&&prods.some(p=>!onlyUsed||p.w.p>0)) cols.push({pid:'_all',f:'pot',h:`Potentiality %${multi?' · all products':''}`,x:'All products'});
+  prods.forEach(p=>{ if(!same&&(!onlyUsed||p.w.p>0)) cols.push({pid:p.id,f:'pot',h:`Potentiality %${multi?' · '+p.n:''}`,x:p.n}); if(!onlyUsed||p.w.c>0) cols.push({pid:p.id,f:'con',h:`Contribution %${multi?' · '+p.n:''}`,x:p.n}); });
+  return cols;
+}
+const mget=(pid,f,rid)=>{ pid=pk(pid,f); const d=(T().mdata||{})[pid]; return d&&d[f]&&d[f][rid]!=null&&d[f][rid]!==''?num(d[f][rid]):0; };
+const dget=(pid,f,pp)=>{ pid=pk(pid,f); const d=T().data[pid]; return d&&d[f]&&d[f][pp]!=null&&d[f][pp]!==''?num(d[f][pp]):0; };
 function tgCompute(){
   buildUnits(); const reps=tgScopeReps(); const prods=tgProducts(); const bricks=tgScopeBricks(reps);
   const raw=reps.map(r=>{ const us=UNITS.filter(u=>S.assign[u.id]===r.id); const o={rep:r,geo:0,pot:{},con:{}};
@@ -1544,7 +1555,8 @@ function renderTgtData(){
        :'Fill each brick\'s share of the national total, in %. Use the Excel template for many bricks, or type here. Bricks of this scope only.';
   $('#tgDataWrap').hidden=!need; $('#tgDataBtns').hidden=!need; $('#tgDLRow').hidden=!need; if(!need) return;
   const prods=tgProducts(); const reps=tgScopeReps(); const bricks=tgScopeBricks(reps);
-  const cols=[]; prods.forEach(p=>{ if(p.w.p>0) cols.push({pid:p.id,f:'pot',h:`Potentiality %${prods.length>1?' · '+p.n:''}`}); if(p.w.c>0) cols.push({pid:p.id,f:'con',h:`Contribution %${prods.length>1?' · '+p.n:''}`}); });
+  const cols=dataCols(prods,true);
+  const showSame=prods.length>1&&prods.some(p=>p.w.p>0); $('#tgPotRow').hidden=!showSame; $('#tgPotSame').checked=potSame();
   if(mr){ buildUnits(); const geo=r=>UNITS.filter(u=>S.assign[u.id]===r.id).reduce((a,u)=>a+u.s,0);
     const totM=c=>reps.reduce((a,r)=>a+mget(c.pid,c.f,r.id),0);
     $('#tgDataTbl').innerHTML=`<thead><tr><th>Medical rep</th><th>District manager</th><th class="r">Geo share %</th>${cols.map(c=>`<th class="r">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${
@@ -1597,6 +1609,11 @@ $('#tgWeights').addEventListener('input',e=>{ const row=e.target.closest('[data-
   const s=w.g+w.p+w.c, ok=Math.abs(s-100)<0.01; const el=row.querySelector('[data-wsum]'); el.className='tg-sum '+(ok?'ok':'bad'); el.textContent=ok?'✓ 100%':s+'%';
   renderTgtResult(); save(); });
 $('#tgWeights').addEventListener('change',()=>{ renderTgtData(); renderTgtResult(); });
+$('#tgPotSame').onchange=e=>{ const t=T(); const on=e.target.checked; const prods=t.products.map(p=>p.id);
+  [['data','data'],['mdata','mdata']].forEach(([k])=>{ const D=t[k]=t[k]||{};
+    if(on){ const all=D._all&&D._all.pot&&Object.keys(D._all.pot).length; if(!all){ const src=prods.find(id=>D[id]&&D[id].pot&&Object.values(D[id].pot).some(x=>x!==''&&x!=null)); if(src){ D._all=D._all||{}; D._all.pot={...D[src].pot}; } } }
+    else if(D._all&&D._all.pot){ prods.forEach(id=>{ D[id]=D[id]||{}; if(!D[id].pot||!Object.values(D[id].pot).some(x=>x!==''&&x!=null)) D[id].pot={...D._all.pot}; }); } });
+  t.potSame=on; renderTgtData(); renderTgtResult(); save(); toast(on?'One potentiality now applies to every product.':'Each product now has its own potentiality column (copied from the shared one to start).',3500); };
 document.querySelectorAll('input[name="tgDL"]').forEach(r=>r.onchange=e=>{ T().dlevel=e.target.value; renderTgtData(); renderTgtResult(); save(); });
 $('#tgDataTbl').addEventListener('input',e=>{ const km=e.target.dataset.m; if(km){ const [pid,f,rid]=km.split('|'); const t=T(); t.mdata=t.mdata||{};
     t.mdata[pid]=t.mdata[pid]||{}; t.mdata[pid][f]=t.mdata[pid][f]||{}; t.mdata[pid][f][rid]=e.target.value;
@@ -1613,22 +1630,22 @@ $('#tgTpl').onclick=async()=>{
   const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Territory data',{views:[{state:'frozen',ySplit:1,xSplit:1}]});
   if(byMR()){
     const cols=[{header:'Medical rep',width:28},{header:'District manager',width:24},{header:'Geo share %',width:12}];
-    prods.forEach(p=>{ cols.push({header:`Potentiality % | ${p.n}`,width:22}); cols.push({header:`Contribution % | ${p.n}`,width:22}); });
+    const dc=dataCols(prods,false); dc.forEach(c=>cols.push({header:`${c.f==='pot'?'Potentiality':'Contribution'} % | ${c.x}`,width:22}));
     ws.columns=cols; styleHeader(ws.getRow(1));
-    reps.forEach(r=>{ const geo=UNITS.filter(u=>S.assign[u.id]===r.id).reduce((a,u)=>a+u.s,0); const vals=[r.name,P(r.parent)?.name||'',+geo.toFixed(4)]; prods.forEach(p=>{ vals.push(mget(p.id,'pot',r.id)||null); vals.push(mget(p.id,'con',r.id)||null); });
+    reps.forEach(r=>{ const geo=UNITS.filter(u=>S.assign[u.id]===r.id).reduce((a,u)=>a+u.s,0); const vals=[r.name,P(r.parent)?.name||'',+geo.toFixed(4)]; dc.forEach(c=>vals.push(mget(c.pid,c.f,r.id)||null));
       const row=ws.addRow(vals); row.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; if(i>3){c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; c.numFmt='0.00';} }); row.getCell(3).numFmt='0.00'; });
-    const tr=ws.addRow(['TOTAL','',{formula:`SUM(C2:C${reps.length+1})`}]); prods.forEach((p,i)=>{ [0,1].forEach(j=>{ const col=4+i*2+j; tr.getCell(col).value={formula:`SUM(${colL(col)}2:${colL(col)}${reps.length+1})`}; tr.getCell(col).numFmt='0.00'; }); }); tr.font={bold:true};
+    const tr=ws.addRow(['TOTAL','',{formula:`SUM(C2:C${reps.length+1})`}]); dc.forEach((c,i)=>{ const col=4+i; tr.getCell(col).value={formula:`SUM(${colL(col)}2:${colL(col)}${reps.length+1})`}; tr.getCell(col).numFmt='0.00'; }); tr.font={bold:true};
     const h=wb.addWorksheet('How to fill'); h.getColumn(1).width=110;
     ['How to fill the territory data (by medical rep)','','Each yellow cell is this rep\'s share of the national total, in %.','Potentiality %: how products similar to yours sell in this rep\'s territory, out of the national total of those products.','Contribution %: how your own product sold in this rep\'s territory, out of your company\'s national sales of it.','Leave a column empty if that factor has 0% weight. Do not rename the reps or the column headers, then upload the file in step 4.']
       .forEach((x,i)=>{const c=h.getCell(i+1,1); c.value=x; if(!i) c.font={bold:true,size:14};});
     const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Target_Rep_Data_${today()}.xlsx`); toast('Rep data template downloaded.'); return;
   }
   const cols=[{header:'70 Brick',width:24},{header:'IMS Region',width:15},{header:'Geo share %',width:12}];
-  prods.forEach(p=>{ cols.push({header:`Potentiality % | ${p.n}`,width:22}); cols.push({header:`Contribution % | ${p.n}`,width:22}); });
+  const dc=dataCols(prods,false); dc.forEach(c=>cols.push({header:`${c.f==='pot'?'Potentiality':'Contribution'} % | ${c.x}`,width:22}));
   ws.columns=cols; styleHeader(ws.getRow(1));
-  bricks.forEach(pp=>{ const vals=[pp,BY[KIDS[pp][0]].rg,+brickGeo(pp).toFixed(4)]; prods.forEach(p=>{ vals.push(dget(p.id,'pot',pp)||null); vals.push(dget(p.id,'con',pp)||null); });
+  bricks.forEach(pp=>{ const vals=[pp,BY[KIDS[pp][0]].rg,+brickGeo(pp).toFixed(4)]; dc.forEach(c=>vals.push(dget(c.pid,c.f,pp)||null));
     const r=ws.addRow(vals); r.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; if(i>3){c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; c.numFmt='0.00';} }); r.getCell(3).numFmt='0.00'; });
-  const tr=ws.addRow(['TOTAL','',{formula:`SUM(C2:C${bricks.length+1})`}]); prods.forEach((p,i)=>{ [0,1].forEach(j=>{ const col=4+i*2+j; tr.getCell(col).value={formula:`SUM(${colL(col)}2:${colL(col)}${bricks.length+1})`}; tr.getCell(col).numFmt='0.00'; }); }); tr.font={bold:true};
+  const tr=ws.addRow(['TOTAL','',{formula:`SUM(C2:C${bricks.length+1})`}]); dc.forEach((c,i)=>{ const col=4+i; tr.getCell(col).value={formula:`SUM(${colL(col)}2:${colL(col)}${bricks.length+1})`}; tr.getCell(col).numFmt='0.00'; }); tr.font={bold:true};
   const h=wb.addWorksheet('How to fill'); h.getColumn(1).width=110;
   ['How to fill the territory data','','Each yellow cell is this brick\'s share of the national total, in %.','Potentiality %: how products similar to yours sell in this brick, out of the national total of those products.','Contribution %: how your own product sold in this brick, out of your company\'s national sales of it.','Leave a column empty if you don\'t use that factor. Keep the brick names and the header row as they are.','Save the file and upload it in Target setting → step 4 → Upload filled data.']
     .forEach((x,i)=>{const c=h.getCell(i+1,1); c.value=x; if(!i) c.font={bold:true,size:14};});
@@ -1641,7 +1658,10 @@ $('#tgUpFile').onchange=async e=>{
     const val=c=>{let v=c&&c.value; if(v&&typeof v==='object') v=('result' in v)?v.result:(v.richText?v.richText.map(t=>t.text).join(''):v.text); return v;};
     const prods=tgProducts(); const hdr=ws.getRow(1); const map=[];
     hdr.eachCell((c,col)=>{ const t=String(val(c)||''); const m=t.match(/^(Potentiality|Contribution)\s*%\s*\|\s*(.+)$/i); if(!m) return;
-      const p=prods.find(x=>x.n.trim().toLowerCase()===m[2].trim().toLowerCase()); if(p) map.push({col,pid:p.id,f:m[1].toLowerCase().startsWith('pot')?'pot':'con'}); });
+      const f=m[1].toLowerCase().startsWith('pot')?'pot':'con'; const nm=m[2].trim().toLowerCase();
+      if(f==='pot'&&nm==='all products'){ map.push({col,pid:'_all',f,all:true}); return; }
+      const p=prods.find(x=>x.n.trim().toLowerCase()===nm); if(p) map.push({col,pid:p.id,f}); });
+    { const t0=T(); const hasAll=map.some(m=>m.all), hasOwn=map.some(m=>m.f==='pot'&&!m.all); if(hasAll&&!hasOwn) t0.potSame=true; else if(hasOwn&&!hasAll) t0.potSame=false; }
     if(!map.length){ toast('No “Potentiality % | product” or “Contribution % | product” columns matched your products. Download the template again.',5000); return; }
     let n=0; const t=T();
     if(/medical rep/i.test(String(val(hdr.getCell(1))||''))){
@@ -1920,6 +1940,7 @@ const HELP={
   pmode:['Set each product by','Price × units: type each product\'s price and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
   tscope:['Who gets the target','Split the target across the whole company, or just one regional or district manager\'s team.'],
   factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
+  potsame:['Same potentiality for all products','Ticked (the default): you fill one potentiality column and every product uses it, which is usual when your products share the same market. Untick it to give each product its own potentiality, for example when they treat different conditions. Contribution is always per product, because it is each product\'s own sales.'],
   tdata:['Territory data','For potentiality and contribution, fill in each 70 brick\'s % or, if your data comes per rep, each medical rep\'s % (choose “Enter data by”). Download the template, fill it in Excel and upload it, or type here. Empty cells count as 0.'],
   tresult:['Targets','Each rep gets: target × weighted share of his bricks. District and regional managers get the sum of their reps. The Excel sheet keeps all of this as live formulas.'],
   save:['Saving and sharing','Your board saves itself in this browser. To keep it safe or move it to another device, download the file. A share link lets anyone open a copy of your structure without changing yours.']
@@ -2006,7 +2027,7 @@ function loadTgtDemo(){
       {id:'pd2',n:'Demo product B (syrup)',price:'60',units:'250000',w:{g:60,p:40,c:0}},
       {id:'pd3',n:'Demo product C (new launch)',price:'120',units:'80000',w:{g:100,p:0,c:0}}
     ]};
-  S.tgt.data.pd1={pot:mk(.45),con:mk(.6)}; S.tgt.data.pd2={pot:mk(.35)};
+  S.tgt.potSame=true; S.tgt.data._all={pot:mk(.45)}; S.tgt.data.pd1={con:mk(.6)};
   renderTgt(); render();
   toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(85*400000+60*250000+120*80000)} EGP. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
 }
@@ -2033,6 +2054,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
+  ['22 Oct 2026',['One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
   ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
