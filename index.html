@@ -1455,7 +1455,11 @@ function tgScopeBricks(reps){ const ids=new Set(reps.map(r=>r.id)); return PAREN
 const brickGeo=pp=>UNITS.filter(u=>u.p===pp).reduce((a,u)=>a+u.s,0);
 const byMR=()=>T().dlevel==='mr';
 // potentiality: one shared set ('_all') for all products by default, or one per product
-function potSame(){ const t=T(); if(t.potSame===undefined){ const has=o=>Object.entries(o||{}).some(([k,v])=>k!=='_all'&&v&&v.pot&&Object.values(v.pot).some(x=>x!==''&&x!=null)); t.potSame=!(has(t.data)||has(t.mdata)); } return t.potSame; }
+function potSame(){ const t=T(); if(t.potSame===undefined||t.potV!==2){
+    // default: one shared potentiality. Older boards had it per product: start the shared set from the first product that has figures.
+    const filled=o=>o&&o.pot&&Object.values(o.pot).some(x=>x!==''&&x!=null);
+    ['data','mdata'].forEach(k=>{ const D=t[k]; if(!D||filled(D._all)) return; const src=Object.keys(D).find(id=>id!=='_all'&&filled(D[id])); if(src){ D._all=D._all||{}; D._all.pot={...D[src].pot}; } });
+    t.potSame=true; t.potV=2; } return t.potSame; }
 const pk=(pid,f)=>f==='pot'&&potSame()?'_all':pid;
 // columns for potentiality / contribution, for tables and templates
 function dataCols(prods,onlyUsed){
@@ -1613,7 +1617,7 @@ $('#tgPotSame').onchange=e=>{ const t=T(); const on=e.target.checked; const prod
   [['data','data'],['mdata','mdata']].forEach(([k])=>{ const D=t[k]=t[k]||{};
     if(on){ const all=D._all&&D._all.pot&&Object.keys(D._all.pot).length; if(!all){ const src=prods.find(id=>D[id]&&D[id].pot&&Object.values(D[id].pot).some(x=>x!==''&&x!=null)); if(src){ D._all=D._all||{}; D._all.pot={...D[src].pot}; } } }
     else if(D._all&&D._all.pot){ prods.forEach(id=>{ D[id]=D[id]||{}; if(!D[id].pot||!Object.values(D[id].pot).some(x=>x!==''&&x!=null)) D[id].pot={...D._all.pot}; }); } });
-  t.potSame=on; renderTgtData(); renderTgtResult(); save(); toast(on?'One potentiality now applies to every product.':'Each product now has its own potentiality column (copied from the shared one to start).',3500); };
+  t.potSame=on; t.potV=2; renderTgtData(); renderTgtResult(); save(); toast(on?'One potentiality now applies to every product.':'Each product now has its own potentiality column (copied from the shared one to start).',3500); };
 document.querySelectorAll('input[name="tgDL"]').forEach(r=>r.onchange=e=>{ T().dlevel=e.target.value; renderTgtData(); renderTgtResult(); save(); });
 $('#tgDataTbl').addEventListener('input',e=>{ const km=e.target.dataset.m; if(km){ const [pid,f,rid]=km.split('|'); const t=T(); t.mdata=t.mdata||{};
     t.mdata[pid]=t.mdata[pid]||{}; t.mdata[pid][f]=t.mdata[pid][f]||{}; t.mdata[pid][f][rid]=e.target.value;
@@ -1661,7 +1665,7 @@ $('#tgUpFile').onchange=async e=>{
       const f=m[1].toLowerCase().startsWith('pot')?'pot':'con'; const nm=m[2].trim().toLowerCase();
       if(f==='pot'&&nm==='all products'){ map.push({col,pid:'_all',f,all:true}); return; }
       const p=prods.find(x=>x.n.trim().toLowerCase()===nm); if(p) map.push({col,pid:p.id,f}); });
-    { const t0=T(); const hasAll=map.some(m=>m.all), hasOwn=map.some(m=>m.f==='pot'&&!m.all); if(hasAll&&!hasOwn) t0.potSame=true; else if(hasOwn&&!hasAll) t0.potSame=false; }
+    { const t0=T(); const hasAll=map.some(m=>m.all), hasOwn=map.some(m=>m.f==='pot'&&!m.all); potSame(); if(hasAll&&!hasOwn) t0.potSame=true; else if(hasOwn&&!hasAll) t0.potSame=false; t0.potV=2; }
     if(!map.length){ toast('No “Potentiality % | product” or “Contribution % | product” columns matched your products. Download the template again.',5000); return; }
     let n=0; const t=T();
     if(/medical rep/i.test(String(val(hdr.getCell(1))||''))){
@@ -2027,7 +2031,7 @@ function loadTgtDemo(){
       {id:'pd2',n:'Demo product B (syrup)',price:'60',units:'250000',w:{g:60,p:40,c:0}},
       {id:'pd3',n:'Demo product C (new launch)',price:'120',units:'80000',w:{g:100,p:0,c:0}}
     ]};
-  S.tgt.potSame=true; S.tgt.data._all={pot:mk(.45)}; S.tgt.data.pd1={con:mk(.6)};
+  S.tgt.potSame=true; S.tgt.potV=2; S.tgt.data._all={pot:mk(.45)}; S.tgt.data.pd1={con:mk(.6)};
   renderTgt(); render();
   toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(85*400000+60*250000+120*80000)} EGP. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
 }
