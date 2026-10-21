@@ -275,6 +275,11 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .tg-sum.ok{background:var(--good-bg);color:var(--good)} .tg-sum.bad{background:var(--bad-bg);color:var(--bad)}
 .tg-cell{width:90px;text-align:right;border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--panel)}
 tfoot td{background:var(--sunk);position:sticky;bottom:0}
+.tg-res th.c{text-align:center;border-bottom:1px solid var(--line)}
+.tg-res tr.h2 th{top:29px}
+.tg-res th.pg1{background:color-mix(in srgb,var(--sunk) 70%,var(--accent-soft))}
+.tg-res tr:not(.grp-rm):not(.grp-dm) td.pg1{background:color-mix(in srgb,transparent 85%,var(--accent-soft))}
+.tg-res td.ro{color:var(--muted)}
 /* split editor */
 .sp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .sp-share{font-family:var(--f-mono);font-size:22px;font-weight:500}
@@ -1144,6 +1149,8 @@ const XC={ink:'FF14251F',rm:'FF6A4C93',rmBg:'FFEDE7F5',dm:'FF1D6FA5',dmBg:'FFE3E
 const thin={style:'thin',color:{argb:XC.line}}; const BORDER={top:thin,left:thin,bottom:thin,right:thin};
 function styleHeader(row){ row.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.head}};c.alignment={vertical:'middle',horizontal:'center',wrapText:true};c.border=BORDER;}); row.height=28; }
 async function logoId(wb){ try{ const r=await fetch('logo.png'); const buf=await r.arrayBuffer(); return wb.addImage({buffer:buf,extension:'png'}); }catch(e){ return null; } }
+// open each sheet with the cursor below the logo, not on A1 (which sits under the logo)
+function startAt(ws,cell){ const v=Object.assign({},(ws.views&&ws.views[0])||{}); v.activeCell=cell; if(!v.state) v.state='normal'; if(v.state==='frozen') v.topLeftCell=v.topLeftCell||cell.replace(/^[A-Z]+/,c=>c); ws.views=[v]; }
 async function titleBlock(ws,wb,img,title,subtitle,cols){
   ws.mergeCells(1,2,1,cols); ws.mergeCells(2,2,2,cols); ws.mergeCells(3,2,3,cols);
   const t=ws.getCell(1,2); t.value=title; t.font={bold:true,size:18,color:{argb:XC.ink}};
@@ -1174,7 +1181,7 @@ $('#dlSheet').onclick=async()=>{
   const w3=wb.addWorksheet('By Region'); w3.columns=[{header:'IMS Region',width:18},{header:'# of 70 Bricks',width:14},{header:'# of 148 Bricks',width:14},{header:'% Geo Share',width:13}]; styleHeader(w3.getRow(1));
   REGIONS.forEach((rg,i)=>{const n=i+2; const r=w3.addRow([rg,{formula:`COUNTIF('70 Bricks'!$B$2:$B$71,A${n})`},{formula:`COUNTIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n})`},{formula:`SUMIF('148 Bricks'!$B$2:$B$${BASE.length+1},A${n},'148 Bricks'!$E$2:$E$${BASE.length+1})`}]); r.eachCell(c=>c.border=BORDER); r.getCell(4).numFmt='0.00';});
   const w4=wb.addWorksheet('How to edit',{views:[{showGridLines:false}]}); w4.getColumn(1).width=16; w4.getColumn(2).width=105;
-  const img=await logoId(wb); if(img!==null) w4.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}});
+  const img=await logoId(wb); if(img!==null) w4.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}}); startAt(w4,'B7');
   [26,20,20,12].forEach((h,i)=>w4.getRow(i+1).height=h);
   w4.getCell('B1').value='How to use your own geo share'; w4.getCell('B1').font={bold:true,size:16,color:{argb:XC.ink}};
   w4.getCell('B2').value='Territory Builder · Khaled Tolba'; w4.getCell('B2').font={size:11,color:{argb:'FF5B6B64'}};
@@ -1225,7 +1232,7 @@ $('#xExcel').onclick=async()=>{
   const ws=wb.addWorksheet('Structure',{views:[{state:'frozen',ySplit:5,showGridLines:false}]});
   ws.columns=[{width:10},{width:30},{width:26},{width:8},{width:9},{width:13},{width:11},{width:70}];
   await titleBlock(ws,wb,img,'Field force structure',`${c.RM} regional · ${c.DM} district · ${c.MR} reps · ${f2(AS)}% of ${f2(totalShare())}% geo share assigned · target ${t?f2(t):'—'}% per rep${S.custom?' · custom geo share: '+S.custom.name:''}`,8);
-  const hr=ws.getRow(5); hr.values=['Level','Name','Reports to','Reps','Bricks','Geo share %','vs target','Bricks & areas']; styleHeader(hr);
+  const hr=ws.getRow(5); hr.values=['Level','Name','Reports to','Reps','Bricks','Geo share %','vs target','Bricks & areas']; styleHeader(hr); startAt(ws,'A6');
   const addR=(vals,kind,tt)=>{ const r=ws.addRow(vals); r.eachCell({includeEmpty:true},(cc,col)=>{cc.border=BORDER; if(col<=8) cc.alignment={vertical:'top',wrapText:col===8};});
     r.getCell(6).numFmt='0.00';
     if(kind==='RM'){ r.eachCell({includeEmpty:true},cc=>cc.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.rmBg}}); r.font={bold:true,color:{argb:XC.rm}}; }
@@ -1253,7 +1260,8 @@ $('#xExcel').onclick=async()=>{
   const w3=wb.addWorksheet('Unassigned',{views:[{state:'frozen',ySplit:1}]});
   w3.columns=[{header:'IMS Region',width:14},{header:'70 Brick',width:20},{header:'148 Brick',width:26},{header:'Area (if split)',width:22},{header:'Geo share %',width:12},{header:'Areas inside',width:70}]; styleHeader(w3.getRow(1));
   UNITS.filter(u=>!S.assign[u.id]).forEach(u=>{const row=w3.addRow([u.rg,u.p,u.n,u.area||'',+u.s.toFixed(4),u.area?'':BY[u.bid].ar]); row.eachCell({includeEmpty:true},cc=>cc.border=BORDER); row.getCell(5).numFmt='0.00'; row.getCell(6).alignment={horizontal:'right',readingOrder:'rtl',wrapText:true};});
-  const ut=w3.addRow(['','','TOTAL','',{formula:`SUM(E2:E${w3.rowCount})`}]); ut.font={bold:true}; ut.getCell(5).numFmt='0.00';
+  if(w3.rowCount===1) w3.addRow(['','','Every brick is assigned','','']);
+  const ut=w3.addRow(['','','TOTAL','',w3.rowCount>1&&UNITS.some(u=>!S.assign[u.id])?{formula:`SUM(E2:E${w3.rowCount})`}:0]); ut.font={bold:true}; ut.getCell(5).numFmt='0.00';
   // Area splits
   const keys=Object.keys(S.splits);
   if(keys.length){ const w4=wb.addWorksheet('Area splits'); w4.columns=[{header:'148 Brick',width:26},{header:'70 Brick',width:20},{header:'Brick geo share %',width:16},{header:'Area',width:26},{header:'% of brick',width:11},{header:'Area geo share %',width:16},{header:'Medical rep',width:24}]; styleHeader(w4.getRow(1));
@@ -1583,8 +1591,10 @@ function renderTgtResult(){
   // group: RM > DM > MR
   const byDm=new Map(); R_.rows.forEach(r=>{ const k=r.dm?r.dm.id:'_'; if(!byDm.has(k)) byDm.set(k,[]); byDm.get(k).push(r); });
   const sumRows=list=>{ const o={total:list.reduce((a,r)=>a+r.total,0),p:{}}; prods.forEach(p=>o.p[p.id]={val:list.reduce((a,r)=>a+r.p[p.id].val,0),units:list.reduce((a,r)=>a+r.p[p.id].units,0)}); return o; };
-  const head=`<tr><th>Level</th><th>Name</th><th class="r">Geo share in scope</th>${prods.map(p=>`<th class="r">${multi?esc(p.n)+' ':''}Target value</th>${units?`<th class="r">${multi?esc(p.n)+' ':''}Units</th>`:''}`).join('')}${multi?'<th class="r">Total value</th>':''}<th class="r">% of target</th></tr>`;
-  const cells=(o,share)=>`${prods.map(p=>`<td class="r num">${fmt0(o.p[p.id].val)}</td>${units?`<td class="r num">${fmt0(o.p[p.id].units)}</td>`:''}`).join('')}${multi?`<td class="r num"><b>${fmt0(o.total)}</b></td>`:''}<td class="r num">${grand?f2(o.total/grand*100):'0.00'}%</td>`;
+  const per=units?2:1;
+  const head=`<tr><th rowspan="2">Level</th><th rowspan="2">Name</th><th rowspan="2" class="r">Geo share in scope</th>${prods.map((p,i)=>`<th colspan="${per}" class="c pg${i%2}">${esc(p.n)}</th>`).join('')}${multi?'<th rowspan="2" class="r">Total value</th>':''}<th rowspan="2" class="r">% of target</th></tr>
+    <tr class="h2">${prods.map((p,i)=>`${units?`<th class="r pg${i%2}">Units</th>`:''}<th class="r pg${i%2}">Value</th>`).join('')}</tr>`;
+  const cells=(o,share)=>`${prods.map((p,i)=>`${units?`<td class="r num ro pg${i%2}">${fmt0(o.p[p.id].units)}</td>`:''}<td class="r num pg${i%2}">${fmt0(o.p[p.id].val)}</td>`).join('')}${multi?`<td class="r num"><b>${fmt0(o.total)}</b></td>`:''}<td class="r num">${grand?f2(o.total/grand*100):'0.00'}%</td>`;
   let body='';
   const rms=new Map(); [...byDm.keys()].forEach(k=>{ const d=P(k); const r=d&&P(d.parent); const rk=r?r.id:'_'; if(!rms.has(rk)) rms.set(rk,[]); rms.get(rk).push(k); });
   rms.forEach((dmKeys,rk)=>{ const rm=P(rk); const all=dmKeys.flatMap(k=>byDm.get(k));
@@ -1593,7 +1603,7 @@ function renderTgtResult(){
       if(d) body+=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${esc(d.name)}</td><td class="r num">${f2(list.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(list))}</tr>`;
       list.forEach(r=>body+=`<tr><td><span class="role mr">MR</span></td><td>${esc(r.rep.name)}</td><td class="r num">${f2(r.geoSh*100)}%</td>${cells(r)}</tr>`); }); });
   body+=`<tr class="grp-rm"><td></td><td><b>Total</b></td><td class="r num">100.00%</td>${cells(sumRows(R_.rows))}</tr>`;
-  box.innerHTML=`<div class="tbl-wrap" style="max-height:60vh"><table>${'<thead>'+head+'</thead><tbody>'+body+'</tbody>'}</table></div>`;
+  box.innerHTML=`<div class="tbl-wrap" style="max-height:60vh"><table class="tg-res">${'<thead>'+head+'</thead><tbody>'+body+'</tbody>'}</table></div>`;
 }
 // events
 $('#tgScope').onchange=e=>{ T().scope=e.target.value; renderTgt(); };
@@ -1694,7 +1704,7 @@ $('#tgDl').onclick=async()=>{
   const NC=isP?9:8;
   sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12},{width:14}];
   await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,NC);
-  const hr=sm.getRow(5); hr.values=['Product',isSh?'Price (optional)':'Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target']:[]); styleHeader(hr);
+  startAt(sm,'A6'); const hr=sm.getRow(5); hr.values=['Product',isSh?'Price (optional)':'Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target']:[]); styleHeader(hr);
   const totR=6+np;
   prods.forEach((p,i)=>{ const r=6+i; const row=sm.getRow(r);
     const val=isSh?{formula:`$D$${totR}*I${r}/100`}:isP?{formula:`B${r}*C${r}`}:p.value;
@@ -1747,29 +1757,65 @@ $('#tgDl').onclick=async()=>{
     v.push({formula:prods.map((p,i)=>`${pc[i].val}${r}`).join('+')});
     const row=rc.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=4){ const L=colL(i); const isVal=pc.some(x=>x.val===L)||L===totalCol; const isU=pc.some(x=>x.units===L); c.numFmt=isVal||isU?'#,##0':(i===4||pc.some(x=>x.potRaw===L||x.conRaw===L)?'0.0000':'0.00%'); if(byMR()&&pc.some(x=>x.potRaw===L||x.conRaw===L)) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; } }); });
   const tr=rc.addRow(['TOTAL']); tr.font={bold:true}; for(let i=4;i<=6+np*8;i++){ const L=colL(i); tr.getCell(i).value={formula:`SUM(${L}2:${L}${RL})`}; tr.getCell(i).border=BORDER; const isVal=pc.some(x=>x.val===L)||L===totalCol; tr.getCell(i).numFmt=isVal||pc.some(x=>x.units===L)?'#,##0':(i===4||pc.some(x=>x.potRaw===L||x.conRaw===L)?'0.0000':'0.00%'); }
-  // Targets (clean)
-  const tg=wb.addWorksheet('Targets',{views:[{state:'frozen',ySplit:5,showGridLines:false}]});
-  const tcols=[{width:9},{width:30},{width:26}]; prods.forEach(()=>{ tcols.push({width:16}); if(isU) tcols.push({width:12}); }); tcols.push({width:18},{width:12}); tg.columns=tcols;
-  const lastC=3+np*(isU?2:1)+2;
-  await titleBlock(tg,wb,img,'Targets by person',`${scopeName} · total target ${fmt0(prods.reduce((a,p)=>a+p.value,0))} · formulas link to Rep calculation and Summary`,lastC);
-  const th=['Level','Name','Reports to']; prods.forEach(p=>{ th.push(np>1?`${p.n} value`:'Target value'); if(isU) th.push(np>1?`${p.n} units`:'Target units'); }); th.push('Total value','% of target');
-  tg.getRow(5).values=th; styleHeader(tg.getRow(5));
+  // Targets (team view): two header rows, each product = Units then Value
+  const tg=wb.addWorksheet('Targets',{views:[{state:'frozen',ySplit:6,xSplit:2,showGridLines:false}]});
+  const per=isU?2:1; const P0=5; // first product column
+  const tcols=[{width:11},{width:32},{width:24},{width:12}]; prods.forEach(()=>{ if(isU) tcols.push({width:12}); tcols.push({width:15}); }); tcols.push({width:16},{width:11}); tg.columns=tcols;
+  const lastC=4+np*per+2; const totC=lastC-1;
+  const grandTxt=fmt0(prods.reduce((a,p)=>a+p.value,0));
+  await titleBlock(tg,wb,img,'Targets by team',`${scopeName} · total target ${grandTxt} EGP · each manager row is the sum of the reps below it`,lastC);
+  const h5=tg.getRow(5), h6=tg.getRow(6);
+  [['Level',1],['Name',2],['Reports to',3],['Geo share in scope',4]].forEach(([t,c])=>{ h5.getCell(c).value=t; tg.mergeCells(5,c,6,c); });
+  prods.forEach((p,i)=>{ const c0=P0+i*per; h5.getCell(c0).value=p.n; if(per>1) tg.mergeCells(5,c0,5,c0+1); if(isU){ h6.getCell(c0).value='Units'; h6.getCell(c0+1).value='Value'; } else h6.getCell(c0).value='Value'; });
+  h5.getCell(totC).value='Total'; tg.mergeCells(5,totC,5,lastC); h6.getCell(totC).value='Value'; h6.getCell(lastC).value='% of target';
+  for(let c=1;c<=lastC;c++){ [h5,h6].forEach(r=>{ const x=r.getCell(c); x.font={bold:true,color:{argb:'FFFFFFFF'}}; x.alignment={vertical:'middle',horizontal:'center',wrapText:true}; x.border=BORDER;
+      const band=c>=P0&&c<totC&&Math.floor((c-P0)/per)%2===1; x.fill={type:'pattern',pattern:'solid',fgColor:{argb:c>=totC?'FF0F6B5C':band?'FF2E4A40':XC.head}}; }); }
+  h5.height=30; h6.height=20; startAt(tg,'C7');
   const rcR=name=>reps.findIndex(r=>r.name===name)+2;
-  const line=(level,name,parent,how)=>{ const r=tg.rowCount+1; const v=[level,name,parent]; prods.forEach((p,i)=>{ v.push({formula:how(pc[i].val)}); if(isU) v.push({formula:how(pc[i].units)}); });
-    const firstV=4, lastV=3+np*(isU?2:1); const valCells=[]; for(let c=firstV;c<=lastV;c+=isU?2:1) valCells.push(colL(c)+r);
-    v.push({formula:valCells.join('+')},{formula:`IF('Rep calculation'!$${totalCol}$${RL+1}=0,0,${colL(lastV+1)}${r}/'Rep calculation'!$${totalCol}$${RL+1})`});
-    const row=tg.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=4) c.numFmt=i===lastV+2?'0.00%':'#,##0'; });
+  const GT=`'Rep calculation'!$${totalCol}$${RL+1}`;
+  const line=(level,name,parent,how)=>{ const r=tg.rowCount+1; const v=[level,name,parent,{formula:how('E')}];
+    const valCells=[]; prods.forEach((p,i)=>{ if(isU) v.push({formula:how(pc[i].units)}); v.push({formula:how(pc[i].val)}); valCells.push(colL(P0+i*per+per-1)+r); });
+    v.push({formula:valCells.join('+')},{formula:`IF(${GT}=0,0,${colL(totC)}${r}/${GT})`});
+    const row=tg.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i===4||i===lastC) c.numFmt='0.00%'; else if(i>4) c.numFmt='#,##0';
+      if(i>=P0&&i<totC&&isU&&(i-P0)%2===0) c.font={color:{argb:'FF5B6B64'}}; if(i===totC) c.font={bold:true}; });
     if(level==='RM'){ row.eachCell({includeEmpty:true},c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.rmBg}}); row.font={bold:true,color:{argb:XC.rm}}; }
     if(level==='DM'){ row.eachCell({includeEmpty:true},c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.dmBg}}); row.font={bold:true,color:{argb:XC.dm}}; }
-    if(level==='MR') row.getCell(1).font={bold:true,color:{argb:XC.mr}};
+    if(level==='MR'){ row.getCell(1).font={bold:true,color:{argb:XC.mr}}; row.getCell(2).alignment={indent:1}; }
     return r; };
   const rcCol=L=>`'Rep calculation'!$${L}$2:$${L}$${RL}`;
   const rmNames=[...new Set(reps.map(r=>r.rm))];
   rmNames.forEach(rm=>{ if(rm) line('RM',rm,'',L=>`SUMIF(${rcCol('C')},"${rm.replace(/"/g,'""')}",${rcCol(L)})`);
     [...new Set(reps.filter(r=>r.rm===rm).map(r=>r.dm))].forEach(dm=>{ if(dm) line('DM',dm,rm,L=>`SUMIF(${rcCol('B')},"${dm.replace(/"/g,'""')}",${rcCol(L)})`);
       reps.filter(r=>r.rm===rm&&r.dm===dm).forEach(rp=>line('MR',rp.name,dm,L=>`IF('Rep calculation'!${L}${rcR(rp.name)}="","",'Rep calculation'!${L}${rcR(rp.name)})`)); }); });
-  const gt=tg.rowCount+1; const gv=['','TOTAL','']; prods.forEach((p,i)=>{ gv.push({formula:`'Rep calculation'!${pc[i].val}${RL+1}`}); if(isU) gv.push({formula:`'Rep calculation'!${pc[i].units}${RL+1}`}); });
-  gv.push({formula:`'Rep calculation'!${totalCol}${RL+1}`},1); const gr=tg.addRow(gv); gr.font={bold:true}; gr.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE3E8E5'}}; if(i>=4) c.numFmt=i===lastC?'0.00%':'#,##0';});
+  { const v=['','TOTAL','',{formula:`'Rep calculation'!E${RL+1}`}]; prods.forEach((p,i)=>{ if(isU) v.push({formula:`'Rep calculation'!${pc[i].units}${RL+1}`}); v.push({formula:`'Rep calculation'!${pc[i].val}${RL+1}`}); });
+    v.push({formula:GT.replace(/\$/g,'')},1); const gr=tg.addRow(v); gr.font={bold:true}; gr.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE3E8E5'}}; if(i===4||i===lastC) c.numFmt='0.00%'; else if(i>4) c.numFmt='#,##0';}); }
+  tg.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'5:6'};
+
+  // Rep target cards: one clear card per medical rep, ready to share or print
+  const cd=wb.addWorksheet('Rep target cards',{views:[{showGridLines:false}]});
+  const CC=isU?4:3; cd.columns=isU?[{width:36},{width:14},{width:17},{width:16}]:[{width:36},{width:17},{width:16}];
+  await titleBlock(cd,wb,img,'Rep target cards',`${scopeName} · one card per medical rep · linked to the other sheets`,CC); startAt(cd,'A5');
+  const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+  let r=5;
+  const ordered=[]; rmNames.forEach(rm=>[...new Set(reps.filter(x=>x.rm===rm).map(x=>x.dm))].forEach(dm=>reps.filter(x=>x.rm===rm&&x.dm===dm).forEach(x=>ordered.push(x))));
+  ordered.forEach((rp,k)=>{ const R=rcR(rp.name); const ref=L=>`'Rep calculation'!${L}${R}`;
+    cd.mergeCells(r,1,r,CC); const t=cd.getCell(r,1); t.value=rp.name; t.font={bold:true,size:13,color:{argb:'FFFFFFFF'}}; t.fill=fill(XC.mr); t.alignment={vertical:'middle',indent:1}; cd.getRow(r).height=24; r++;
+    [rp.dm?'District manager: '+rp.dm:'No district manager',rp.rm?'Regional manager: '+rp.rm:''].filter(Boolean).forEach(txt=>{ cd.mergeCells(r,1,r,CC); const m=cd.getCell(r,1); m.value=txt; m.font={color:{argb:'FF5B6B64'}}; m.fill=fill(XC.band); m.alignment={indent:1}; r++; });
+    const hd=isU?['Product','Units','Value (EGP)','% of product target']:['Product','Value (EGP)','% of product target'];
+    hd.forEach((x,i)=>{ const c=cd.getCell(r,i+1); c.value=x; c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill=fill(XC.head); c.alignment={horizontal:i?'center':'left',vertical:'middle',wrapText:true,indent:i?0:1}; c.border=BORDER; }); cd.getRow(r).height=30; r++;
+    const first=r;
+    prods.forEach((p,i)=>{ const v=[p.n]; if(isU) v.push({formula:ref(pc[i].units)}); v.push({formula:ref(pc[i].val)},{formula:ref(pc[i].pct)});
+      v.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.alignment=j?{}:{indent:1}; });
+      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; cd.getCell(r,isU?4:3).numFmt='0.00%'; r++; });
+    const vc=isU?'C':'B';
+    const tv=[`Total target (% = share of the whole target)`]; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`},{formula:`IF(${GT}=0,0,${vc}${r}/${GT})`});
+    tv.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.font={bold:true}; c.fill=fill('FFE3E8E5'); c.alignment=j?{}:{indent:1}; });
+    cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?4:3).numFmt='0.00%'; r++;
+    cd.mergeCells(r,1,r,CC); const g=cd.getCell(r,1); g.value={formula:`"Geo share in this scope: "&TEXT(${ref('E')},"0.00%")`}; g.font={italic:true,size:9,color:{argb:'FF5B6B64'}}; g.alignment={indent:1}; r++;
+    if(k%3===2) cd.getRow(r-1).addPageBreak(); r+=1; });
+  cd.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};
+  // put the two reading sheets first
+  const order=[sm,tg,cd]; wb.worksheets.forEach(w=>{ if(!order.includes(w)) order.push(w); }); order.forEach((w,i)=>w.orderNo=i);
   // Summary: check line
   const ck=totR+2; sm.getCell(ck,1).value='Check: sum of all reps'; sm.getCell(ck,4).value={formula:`'Rep calculation'!${totalCol}${RL+1}`}; sm.getCell(ck,4).numFmt='#,##0'; sm.getCell(ck,1).font={italic:true,color:{argb:'FF5B6B64'}};
   sm.getCell(ck+2,1).value='How it works'; sm.getCell(ck+2,1).font={bold:true};
@@ -1796,7 +1842,7 @@ $('#xTpl').onclick=async()=>{
     r.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=5) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; }); });
   ws.autoFilter='A1:G1';
   const h=wb.addWorksheet('How to fill',{views:[{showGridLines:false}]}); h.getColumn(1).width=16; h.getColumn(2).width=100;
-  if(img!==null) h.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}}); [26,20,20,12].forEach((x,i)=>h.getRow(i+1).height=x);
+  if(img!==null) h.addImage(img,{tl:{col:0.15,row:0.2},ext:{width:84,height:84}}); [26,20,20,12].forEach((x,i)=>h.getRow(i+1).height=x); startAt(h,'B6');
   h.getCell('B1').value='Import your structure'; h.getCell('B1').font={bold:true,size:16};
   h.getCell('B2').value='Territory Builder · Khaled Tolba'; h.getCell('B3').value={text:SITE_URL,hyperlink:SITE_URL}; h.getCell('B3').font={underline:true,color:{argb:'FF0F6B5C'}};
   ['1. Every one of the 148 IMS bricks has a row on the “Structure” tab. Don\'t type brick names: they are already there.','2. Fill the yellow columns: the medical rep who covers the brick, their district manager and regional manager.','3. Write each person\'s name the same way every time (the site ignores capital letters and extra spaces).','4. Leave the medical rep empty for bricks nobody covers yet. You can leave the managers empty too.','5. One rep reports to one district manager, and one district manager to one regional manager.','6. Save the file and upload it on the site: Save, export & share → Import from Excel → Upload filled template.','','Before importing, the site shows what it found and warns about anything that looks wrong, like the same name spelled two ways.']
@@ -2058,7 +2104,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['22 Oct 2026',['One potentiality for all products by default, with an option to use a different one per product']],
+  ['22 Oct 2026',['Target sheet: units before value for each product, two-row headers, and a new “Rep target cards” sheet with one card per rep','Downloaded sheets open with the cursor below the logo','One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
   ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
