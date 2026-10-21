@@ -260,6 +260,9 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .tg-total .num{font-size:22px;font-weight:500}
 .tg-prod input{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;background:var(--bg);min-width:70px}
 .tg-prod td{padding:5px 6px}
+.tg-prod .ro{color:var(--muted)}
+.tg-prod tfoot td{font-weight:600;border-top:1px solid var(--line)}
+.tg-prod .ok{color:var(--good)}.tg-prod .bad{color:var(--bad)}
 .tg-ws{display:flex;flex-direction:column;gap:8px}
 .tg-w{display:grid;grid-template-columns:minmax(120px,1.2fr) repeat(3,minmax(90px,1fr)) 80px;gap:10px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 @media (max-width:640px){.tg-w{grid-template-columns:1fr 1fr 1fr}.tg-wn{grid-column:1/-1}}
@@ -425,9 +428,14 @@ footer.foot img{width:84px;height:84px;display:block}
           <label class="tg-radio"><input type="radio" name="tgMode" value="total"> Total value</label>
           <label class="tg-radio"><input type="radio" name="tgMode" value="products"> By products</label>
         </div>
-        <div id="tgTotalBox"><label class="tg-big"><span class="lbl">Target value (EGP)</span><input id="tgTotal" class="num" inputmode="decimal" placeholder="e.g. 50,000,000"></label></div>
+        <div id="tgTotalBox"><label class="tg-big"><span class="lbl" id="tgTotalLbl">Target value (EGP)</span><input id="tgTotal" class="num" inputmode="decimal" placeholder="e.g. 50,000,000"></label></div>
         <div id="tgProdBox" hidden>
-          <div class="tbl-wrap" style="max-height:none"><table class="tg-prod"><thead><tr><th>Product</th><th>Price</th><th>Units</th><th class="r">Value</th><th></th></tr></thead><tbody id="tgProdRows"></tbody></table></div>
+          <div class="row" style="gap:8px"><span class="lbl">Set each product by</span><button class="help" data-help="pmode" aria-label="Help">?</button>
+            <div class="seg" role="radiogroup" aria-label="How to set product targets">
+              <label class="tg-radio"><input type="radio" name="tgPMode" value="units"> Price × units</label>
+              <label class="tg-radio"><input type="radio" name="tgPMode" value="share"> % of total target</label>
+            </div></div>
+          <div class="tbl-wrap" style="max-height:none"><table class="tg-prod"><thead id="tgProdHead"></thead><tbody id="tgProdRows"></tbody><tfoot id="tgProdFoot"></tfoot></table></div>
           <button id="tgAddProd" style="align-self:flex-start">+ Add product</button>
         </div>
         <div class="tg-total"><span class="lbl">Total target</span><span class="num" id="tgGrand">0</span></div></div>
@@ -1413,7 +1421,7 @@ document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('
 $('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
 
 // ---------- target setting ----------
-function tgtDefault(){ return {scope:'all',mode:'total',total:'',products:[{id:'p1',n:'Product 1',price:'',units:'',w:{g:100,p:0,c:0}}],sameW:true,w:{g:100,p:0,c:0},data:{}}; }
+function tgtDefault(){ return {scope:'all',mode:'total',pmode:'units',total:'',products:[{id:'p1',n:'Product 1',price:'',units:'',w:{g:100,p:0,c:0}}],sameW:true,w:{g:100,p:0,c:0},data:{}}; }
 function T(){ if(!S.tgt) S.tgt=tgtDefault(); return S.tgt; }
 const num=v=>{ const x=parseFloat(String(v).replace(/,/g,'')); return isNaN(x)?0:x; };
 const fmt0=v=>Math.round(v).toLocaleString('en-US');
@@ -1422,8 +1430,12 @@ const fmtS=v=>v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':fmt0(v
 function tgProducts(){
   const t=T();
   if(t.mode==='total') return [{id:'all',n:'Total target',price:0,units:0,value:num(t.total),w:t.w}];
+  if(t.pmode==='share') return t.products.map(p=>{ const price=num(p.price), value=num(t.total)*num(p.sh)/100; return {id:p.id,n:p.n||'Product',price,units:price?value/price:0,value,sh:num(p.sh),w:t.sameW?t.w:p.w}; });
   return t.products.map(p=>({id:p.id,n:p.n||'Product',price:num(p.price),units:num(p.units),value:num(p.price)*num(p.units),w:t.sameW?t.w:p.w}));
 }
+const tgShare=()=>T().mode==='products'&&T().pmode==='share';
+const tgShareSum=()=>T().products.reduce((a,p)=>a+num(p.sh),0);
+const tgShowUnits=()=>{ const t=T(); return t.mode==='products'&&(t.pmode!=='share'||t.products.some(p=>num(p.price)>0)); };
 function tgScopeReps(){
   const sc=T().scope; const all=S.people.filter(p=>p.role==='MR');
   if(sc==='all') return all;
@@ -1449,15 +1461,16 @@ function tgCompute(){
       res.p[p.id]={potRaw:o.pot[p.id],conRaw:o.con[p.id],ps,cs,idx,val:p.value*idx,units:p.price?p.value*idx/p.price:0}; });
     res.total=prods.reduce((a,p)=>a+res.p[p.id].val,0); return res; });
   const issues=[];
+  if(tgShare()){ const ss=tgShareSum(); if(Math.abs(ss-100)>0.01) issues.push(`Product shares add up to ${+ss.toFixed(2)}%. They must add up to 100% of the total target.`); }
   if(!reps.length) issues.push('There are no medical reps in this scope yet. Build or fill the structure first.');
   if(reps.length&&!G) issues.push('The reps in this scope have no bricks yet, so there is nothing to split the target on.');
   prods.forEach(p=>{ const s=p.w.g+p.w.p+p.w.c; if(Math.abs(s-100)>0.01) issues.push(`Factor weights for “${p.n}” add up to ${s}%. They must add up to 100%.`);
-    if(!p.value) issues.push(t_noValue(p));
+    if(!p.value){ const m=t_noValue(p); if(!issues.includes(m)) issues.push(m); }
     if(p.w.p>0&&!raw.some(o=>o.pot[p.id]>0)) issues.push(`“${p.n}” uses potentiality but no potentiality data is filled for these bricks (step 4).`);
     if(p.w.c>0&&!raw.some(o=>o.con[p.id]>0)) issues.push(`“${p.n}” uses contribution but no contribution data is filled for these bricks (step 4).`); });
   return {reps,prods,bricks,rows,issues};
 }
-const t_noValue=p=>T().mode==='total'?'Enter the target value in step 2.':`“${p.n}” has no value yet. Enter its price and units.`;
+const t_noValue=p=>T().mode==='total'?'Enter the target value in step 2.':tgShare()?(num(T().total)?`“${p.n}” has no share yet. Give it a % of the total target.`:'Enter the total target in step 2.'):`“${p.n}” has no value yet. Enter its price and units.`;
 const usesData=()=>tgProducts().some(p=>p.w.p>0||p.w.c>0);
 
 function renderTgt(){
@@ -1470,11 +1483,34 @@ function renderTgt(){
   const reps=tgScopeReps(); const g=reps.reduce((a,r)=>a+UNITS.filter(u=>S.assign[u.id]===r.id).reduce((x,u)=>x+u.s,0),0);
   $('#tgScopeInfo').innerHTML=`${reps.length} medical reps · <span class="num">${f2(g)}%</span> geo share in this scope. ${t.scope==='all'?'':'Enter the target for this manager only; it is split among their reps.'}`;
   document.querySelector(`input[name="tgMode"][value="${t.mode}"]`).checked=true;
-  $('#tgTotalBox').hidden=t.mode!=='total'; $('#tgProdBox').hidden=t.mode!=='products';
-  $('#tgTotal').value=t.total;
-  $('#tgProdRows').innerHTML=t.products.map((p,i)=>`<tr data-i="${i}"><td><input data-pf="n" value="${esc(p.n)}" aria-label="Product name"></td><td><input data-pf="price" class="num" inputmode="decimal" value="${esc(p.price)}" placeholder="0" aria-label="Price"></td><td><input data-pf="units" class="num" inputmode="decimal" value="${esc(p.units)}" placeholder="0" aria-label="Units"></td><td class="r num" data-pv>${fmt0(num(p.price)*num(p.units))}</td><td><button class="ghost" data-prm="${i}" ${t.products.length<2?'disabled':''} title="Remove product">✕</button></td></tr>`).join('');
+  if(!t.pmode) t.pmode='units';
+  document.querySelector(`input[name="tgPMode"][value="${t.pmode}"]`).checked=true;
+  $('#tgTotalBox').hidden=!(t.mode==='total'||t.pmode==='share'); $('#tgProdBox').hidden=t.mode!=='products';
+  $('#tgTotal').value=t.total; $('#tgTotalLbl').textContent=t.mode==='products'?'Total target for all products (EGP)':'Target value (EGP)';
+  renderProdTable();
   $('#tgSameRow').hidden=t.mode!=='products'; $('#tgSame').checked=t.sameW;
   renderTgtWeights(); renderTgtData(); renderTgtResult();
+}
+function renderProdTable(){
+  const t=T(); const sh=t.pmode==='share';
+  const rm=i=>`<td><button class="ghost" data-prm="${i}" ${t.products.length<2?'disabled':''} title="Remove product">✕</button></td>`;
+  const inp=(f,v,ph,lab)=>`<td><input data-pf="${f}" class="num" inputmode="decimal" value="${esc(v||'')}" placeholder="${ph}" aria-label="${lab}"></td>`;
+  $('#tgProdHead').innerHTML=sh?'<tr><th>Product</th><th>% of target</th><th>Price (optional)</th><th class="r">Units</th><th class="r">Value</th><th></th></tr>'
+                                :'<tr><th>Product</th><th>Price</th><th>Units</th><th class="r">Value</th><th class="r">% of target</th><th></th></tr>';
+  $('#tgProdRows').innerHTML=t.products.map((p,i)=>`<tr data-i="${i}"><td><input data-pf="n" value="${esc(p.n)}" aria-label="Product name"></td>${
+    sh?inp('sh',p.sh,'0','Share of total target %')+inp('price',p.price,'0','Price')+'<td class="r num ro" data-pu></td><td class="r num" data-pv></td>'
+      :inp('price',p.price,'0','Price')+inp('units',p.units,'0','Units')+'<td class="r num" data-pv></td><td class="r num ro" data-ps></td>'}${rm(i)}</tr>`).join('');
+  updProdCells();
+}
+function updProdCells(){
+  const t=T(); const sh=t.pmode==='share'; const prods=tgProducts(); const tot=prods.reduce((a,p)=>a+p.value,0);
+  document.querySelectorAll('#tgProdRows tr').forEach((tr,i)=>{ const p=prods[i]; if(!p) return;
+    const v=tr.querySelector('[data-pv]'); if(v) v.textContent=fmt0(p.value);
+    const u=tr.querySelector('[data-pu]'); if(u) u.textContent=p.price?fmt0(p.units):'—';
+    const s=tr.querySelector('[data-ps]'); if(s) s.textContent=tot?(p.value/tot*100).toFixed(1)+'%':'—'; });
+  if(sh){ const ss=tgShareSum(), ok=Math.abs(ss-100)<0.01;
+    $('#tgProdFoot').innerHTML=`<tr><td>Total</td><td class="num ${ok?'ok':'bad'}">${ok?'✓ 100%':(+ss.toFixed(2))+'%'+(ss<100?` · ${+(100-ss).toFixed(2)}% left`:' · too much')}</td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td></td></tr>`; }
+  else $('#tgProdFoot').innerHTML=t.products.length>1?`<tr><td>Total</td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td class="r num">${tot?'100%':''}</td><td></td></tr>`:'';
 }
 function weightRow(key,label,w){
   const s=w.g+w.p+w.c, ok=Math.abs(s-100)<0.01;
@@ -1502,7 +1538,7 @@ function renderTgtData(){
 }
 function renderTgtResult(){
   if(view==='tgt') renderStats();
-  const R_=tgCompute(); const box=$('#tgResult'); const prods=R_.prods; const multi=prods.length>1; const units=T().mode==='products';
+  const R_=tgCompute(); const box=$('#tgResult'); const prods=R_.prods; const multi=prods.length>1; const units=tgShowUnits();
   const grand=prods.reduce((a,p)=>a+p.value,0);
   $('#tgGrand').textContent=fmt0(grand);
   $('#tgIssues').innerHTML=R_.issues.map(x=>`<div>• ${esc(x)}</div>`).join(''); $('#tgIssues').hidden=!R_.issues.length;
@@ -1526,9 +1562,13 @@ function renderTgtResult(){
 // events
 $('#tgScope').onchange=e=>{ T().scope=e.target.value; renderTgt(); };
 document.querySelectorAll('input[name="tgMode"]').forEach(r=>r.onchange=e=>{ T().mode=e.target.value; renderTgt(); save(); });
-$('#tgTotal').oninput=e=>{ T().total=e.target.value; renderTgtResult(); save(); };
-$('#tgAddProd').onclick=()=>{ const t=T(); const id='p'+Date.now().toString(36); t.products.push({id,n:`Product ${t.products.length+1}`,price:'',units:'',w:{...t.w}}); renderTgt(); save(); };
-$('#tgProdRows').addEventListener('input',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const p=T().products[+tr.dataset.i]; p[e.target.dataset.pf]=e.target.value; tr.querySelector('[data-pv]').textContent=fmt0(num(p.price)*num(p.units)); renderTgtResult(); save(); });
+document.querySelectorAll('input[name="tgPMode"]').forEach(r=>r.onchange=e=>{ const t=T(); t.pmode=e.target.value;
+  if(t.pmode==='share'){ const vals=t.products.map(p=>num(p.price)*num(p.units)); const tot=vals.reduce((a,v)=>a+v,0);
+    if(tot&&!t.products.some(p=>num(p.sh))){ t.products.forEach((p,i)=>p.sh=String(+(vals[i]/tot*100).toFixed(2))); if(!num(t.total)) t.total=String(tot); } }
+  renderTgt(); save(); });
+$('#tgTotal').oninput=e=>{ T().total=e.target.value; if(tgShare()) updProdCells(); renderTgtResult(); save(); };
+$('#tgAddProd').onclick=()=>{ const t=T(); const id='p'+Date.now().toString(36); t.products.push({id,n:`Product ${t.products.length+1}`,price:'',units:'',sh:tgShare()?String(Math.max(0,+(100-tgShareSum()).toFixed(2))):'',w:{...t.w}}); renderTgt(); save(); };
+$('#tgProdRows').addEventListener('input',e=>{ const tr=e.target.closest('tr'); if(!tr) return; const p=T().products[+tr.dataset.i]; p[e.target.dataset.pf]=e.target.value; updProdCells(); renderTgtResult(); save(); });
 $('#tgProdRows').addEventListener('change',e=>{ if(e.target.dataset.pf==='n'){ renderTgtWeights(); renderTgtData(); renderTgtResult(); } });
 $('#tgProdRows').addEventListener('click',e=>{ const b=e.target.closest('[data-prm]'); if(!b) return; const t=T(); const p=t.products.splice(+b.dataset.prm,1)[0]; delete t.data[p.id]; renderTgt(); save(); });
 $('#tgSame').onchange=e=>{ const t=T(); t.sameW=e.target.checked; if(!t.sameW) t.products.forEach(p=>p.w={...t.w}); renderTgt(); save(); };
@@ -1577,22 +1617,29 @@ $('#tgUpFile').onchange=async e=>{
 const colL=n=>{ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
 $('#tgDl').onclick=async()=>{
   if(!needXL()) return; const R_=tgCompute(); if(R_.issues.length) return;
-  const t=T(); const prods=R_.prods; const np=prods.length; const isP=t.mode==='products';
+  const t=T(); const prods=R_.prods; const np=prods.length; const isP=t.mode==='products'; const isSh=isP&&t.pmode==='share'; const isU=tgShowUnits();
   const uniq=(list,key)=>{ const seen={}; list.forEach(o=>{ const b=o[key]; seen[b]=(seen[b]||0)+1; if(seen[b]>1) o[key]=`${b} (${seen[b]})`; }); };
   const reps=R_.rows.map(r=>({id:r.rep.id,name:r.rep.name,dm:r.dm?r.dm.name:'',rm:(r.dm&&P(r.dm.parent))?P(r.dm.parent).name:''})); uniq(reps,'name');
   const scopeNode=P(t.scope); const scopeName=scopeNode?`${scopeNode.role==='DM'?'District':'Regional'}: ${scopeNode.name}`:'Whole structure';
   const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder'; const img=await logoId(wb);
   // Summary
   const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
-  sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12}];
-  await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,8);
-  const hr=sm.getRow(5); hr.values=['Product','Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check']; styleHeader(hr);
+  const NC=isP?9:8;
+  sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12},{width:14}];
+  await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,NC);
+  const hr=sm.getRow(5); hr.values=['Product',isSh?'Price (optional)':'Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target']:[]); styleHeader(hr);
+  const totR=6+np;
   prods.forEach((p,i)=>{ const r=6+i; const row=sm.getRow(r);
-    row.values=[p.n,isP?p.price:null,isP?p.units:null,isP?{formula:`B${r}*C${r}`}:p.value,p.w.g,p.w.p,p.w.c,{formula:`E${r}+F${r}+G${r}`}];
-    row.eachCell({includeEmpty:true},(c,col)=>{ if(col>8) return; c.border=BORDER; if((isP&&(col===2||col===3))||(!isP&&col===4)||col>=5&&col<=7) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; });
-    row.getCell(4).numFmt='#,##0'; row.getCell(2).numFmt='#,##0.00'; row.getCell(3).numFmt='#,##0'; });
-  const totR=6+np; sm.getRow(totR).values=['TOTAL TARGET','','',{formula:`SUM(D6:D${totR-1})`}]; sm.getRow(totR).font={bold:true}; sm.getCell(totR,4).numFmt='#,##0';
-  for(let c=1;c<=8;c++) sm.getCell(totR,c).border=BORDER;
+    const val=isSh?{formula:`$D$${totR}*I${r}/100`}:isP?{formula:`B${r}*C${r}`}:p.value;
+    const un=isSh?{formula:`IF(B${r}>0,D${r}/B${r},"")`}:isP?p.units:null;
+    row.values=[p.n,isP?(p.price||(isSh?null:0)):null,un,val,p.w.g,p.w.p,p.w.c,{formula:`E${r}+F${r}+G${r}`}].concat(isP?[isSh?p.sh:{formula:`IF($D$${totR}=0,0,D${r}/$D$${totR}*100)`}]:[]);
+    row.eachCell({includeEmpty:true},(c,col)=>{ if(col>NC) return; c.border=BORDER; const ed=(isSh&&(col===2||col===9))||(isP&&!isSh&&(col===2||col===3))||(!isP&&col===4)||(col>=5&&col<=7); if(ed) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; });
+    row.getCell(4).numFmt='#,##0'; row.getCell(2).numFmt='#,##0.00'; row.getCell(3).numFmt='#,##0'; if(isP) row.getCell(9).numFmt='0.00'; });
+  if(isSh){ sm.getRow(totR).values=['TOTAL TARGET (type it here)','','',num(t.total),'','','','',{formula:`SUM(I6:I${totR-1})`}]; sm.getCell(totR,4).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}};
+    sm.getCell(totR+1,9).value={formula:`IF(ABS(I${totR}-100)<0.01,"✓ 100%","Must be 100%")`}; sm.getCell(totR+1,9).font={italic:true,color:{argb:'FF5B6B64'}}; }
+  else sm.getRow(totR).values=['TOTAL TARGET','','',{formula:`SUM(D6:D${totR-1})`}].concat(isP?['','','','',{formula:`SUM(I6:I${totR-1})`}]:[]);
+  sm.getRow(totR).font={bold:true}; sm.getCell(totR,4).numFmt='#,##0'; if(isP) sm.getCell(totR,9).numFmt='0.00';
+  for(let c=1;c<=NC;c++) sm.getCell(totR,c).border=BORDER;
   const SROW=i=>6+i; // product i row on Summary
   // hierarchy summary rows later (after Rep calc columns are known)
   // Brick data
@@ -1634,14 +1681,14 @@ $('#tgDl').onclick=async()=>{
   const tr=rc.addRow(['TOTAL']); tr.font={bold:true}; for(let i=4;i<=6+np*8;i++){ const L=colL(i); tr.getCell(i).value={formula:`SUM(${L}2:${L}${RL})`}; tr.getCell(i).border=BORDER; const isVal=pc.some(x=>x.val===L)||L===totalCol; tr.getCell(i).numFmt=isVal||pc.some(x=>x.units===L)?'#,##0':(i===4||pc.some(x=>x.potRaw===L||x.conRaw===L)?'0.0000':'0.00%'); }
   // Targets (clean)
   const tg=wb.addWorksheet('Targets',{views:[{state:'frozen',ySplit:5,showGridLines:false}]});
-  const tcols=[{width:9},{width:30},{width:26}]; prods.forEach(()=>{ tcols.push({width:16}); if(isP) tcols.push({width:12}); }); tcols.push({width:18},{width:12}); tg.columns=tcols;
-  const lastC=3+np*(isP?2:1)+2;
+  const tcols=[{width:9},{width:30},{width:26}]; prods.forEach(()=>{ tcols.push({width:16}); if(isU) tcols.push({width:12}); }); tcols.push({width:18},{width:12}); tg.columns=tcols;
+  const lastC=3+np*(isU?2:1)+2;
   await titleBlock(tg,wb,img,'Targets by person',`${scopeName} · total target ${fmt0(prods.reduce((a,p)=>a+p.value,0))} · formulas link to Rep calculation and Summary`,lastC);
-  const th=['Level','Name','Reports to']; prods.forEach(p=>{ th.push(np>1?`${p.n} value`:'Target value'); if(isP) th.push(np>1?`${p.n} units`:'Target units'); }); th.push('Total value','% of target');
+  const th=['Level','Name','Reports to']; prods.forEach(p=>{ th.push(np>1?`${p.n} value`:'Target value'); if(isU) th.push(np>1?`${p.n} units`:'Target units'); }); th.push('Total value','% of target');
   tg.getRow(5).values=th; styleHeader(tg.getRow(5));
   const rcR=name=>reps.findIndex(r=>r.name===name)+2;
-  const line=(level,name,parent,how)=>{ const r=tg.rowCount+1; const v=[level,name,parent]; prods.forEach((p,i)=>{ v.push({formula:how(pc[i].val)}); if(isP) v.push({formula:how(pc[i].units)}); });
-    const firstV=4, lastV=3+np*(isP?2:1); const valCells=[]; for(let c=firstV;c<=lastV;c+=isP?2:1) valCells.push(colL(c)+r);
+  const line=(level,name,parent,how)=>{ const r=tg.rowCount+1; const v=[level,name,parent]; prods.forEach((p,i)=>{ v.push({formula:how(pc[i].val)}); if(isU) v.push({formula:how(pc[i].units)}); });
+    const firstV=4, lastV=3+np*(isU?2:1); const valCells=[]; for(let c=firstV;c<=lastV;c+=isU?2:1) valCells.push(colL(c)+r);
     v.push({formula:valCells.join('+')},{formula:`IF('Rep calculation'!$${totalCol}$${RL+1}=0,0,${colL(lastV+1)}${r}/'Rep calculation'!$${totalCol}$${RL+1})`});
     const row=tg.addRow(v); row.eachCell({includeEmpty:true},(c,i)=>{ c.border=BORDER; if(i>=4) c.numFmt=i===lastV+2?'0.00%':'#,##0'; });
     if(level==='RM'){ row.eachCell({includeEmpty:true},c=>c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.rmBg}}); row.font={bold:true,color:{argb:XC.rm}}; }
@@ -1653,7 +1700,7 @@ $('#tgDl').onclick=async()=>{
   rmNames.forEach(rm=>{ if(rm) line('RM',rm,'',L=>`SUMIF(${rcCol('C')},"${rm.replace(/"/g,'""')}",${rcCol(L)})`);
     [...new Set(reps.filter(r=>r.rm===rm).map(r=>r.dm))].forEach(dm=>{ if(dm) line('DM',dm,rm,L=>`SUMIF(${rcCol('B')},"${dm.replace(/"/g,'""')}",${rcCol(L)})`);
       reps.filter(r=>r.rm===rm&&r.dm===dm).forEach(rp=>line('MR',rp.name,dm,L=>`IF('Rep calculation'!${L}${rcR(rp.name)}="","",'Rep calculation'!${L}${rcR(rp.name)})`)); }); });
-  const gt=tg.rowCount+1; const gv=['','TOTAL','']; prods.forEach((p,i)=>{ gv.push({formula:`'Rep calculation'!${pc[i].val}${RL+1}`}); if(isP) gv.push({formula:`'Rep calculation'!${pc[i].units}${RL+1}`}); });
+  const gt=tg.rowCount+1; const gv=['','TOTAL','']; prods.forEach((p,i)=>{ gv.push({formula:`'Rep calculation'!${pc[i].val}${RL+1}`}); if(isU) gv.push({formula:`'Rep calculation'!${pc[i].units}${RL+1}`}); });
   gv.push({formula:`'Rep calculation'!${totalCol}${RL+1}`},1); const gr=tg.addRow(gv); gr.font={bold:true}; gr.eachCell({includeEmpty:true},(c,i)=>{c.border=BORDER; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE3E8E5'}}; if(i>=4) c.numFmt=i===lastC?'0.00%':'#,##0';});
   // Summary: check line
   const ck=totR+2; sm.getCell(ck,1).value='Check: sum of all reps'; sm.getCell(ck,4).value={formula:`'Rep calculation'!${totalCol}${RL+1}`}; sm.getCell(ck,4).numFmt='#,##0'; sm.getCell(ck,1).font={italic:true,color:{argb:'FF5B6B64'}};
@@ -1826,6 +1873,7 @@ const HELP={
   build:['Build full structure','Type how many regional managers, district managers and reps you need. “Split equally” only creates empty slots. “Fill by geography” also gives each rep neighbouring bricks with a similar geo share. It is a first draft: always review it.'],
   fill:['Fill level','70 gives each rep whole bricks (simpler, less even). 148 can split big bricks between reps, so shares come out more even.'],
   custom:['Your own geo share','Download the brick sheet, change the yellow % Geo Share column, and upload it. Your numbers then replace the standard IMS geo share on your board only, in this browser.'],
+  pmode:['Set each product by','Price × units: type each product\'s price and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
   tscope:['Who gets the target','Split the target across the whole company, or just one regional or district manager\'s team.'],
   factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
   tdata:['Territory data','For potentiality and contribution, fill in each 70 brick\'s % (download the template, fill it in Excel, upload). Bricks left empty count as 0.'],
@@ -1941,6 +1989,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
+  ['21 Oct 2026',['Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
   ['Sep–Oct 2026',['Import a structure from Excel with spelling checks and a review step','Target setting by total or by product, with geo share, potentiality and contribution weights, and a live-formula Excel sheet','Build full structure (3 RM · 9 DM · 45 reps by default) with an automatic fill by geography','Split a brick into areas, rep “View” card, your own geo share upload, Excel structure report and share links']]
 ];
