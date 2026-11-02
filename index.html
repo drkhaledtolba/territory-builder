@@ -261,6 +261,8 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 .tg-prod input{width:100%;border:1px solid var(--line);border-radius:5px;padding:5px 7px;background:var(--bg);min-width:70px}
 .tg-prod td{padding:5px 6px}
 .tg-prod .ro{color:var(--muted)}
+.tg-prod td:first-child input{min-width:200px}
+.tg-prod input.miss{border-color:var(--warn);background:var(--warn-bg)}
 .tg-prod tfoot td{font-weight:600;border-top:1px solid var(--line)}
 .tg-prod .ok{color:var(--good)}.tg-prod .bad{color:var(--bad)}
 .tg-ws{display:flex;flex-direction:column;gap:8px}
@@ -443,6 +445,7 @@ footer.foot img{width:84px;height:84px;display:block}
               <label class="tg-radio"><input type="radio" name="tgPMode" value="units"> Price × units</label>
               <label class="tg-radio"><input type="radio" name="tgPMode" value="share"> % of total target</label>
             </div></div>
+          <div class="sub" style="margin:0">Values and units use the <b>ex-factory price</b>. The public price is for reference; a product without an ex-factory price uses its public price (orange box).</div>
           <div class="tbl-wrap" style="max-height:none"><table class="tg-prod"><thead id="tgProdHead"></thead><tbody id="tgProdRows"></tbody><tfoot id="tgProdFoot"></tfoot></table></div>
           <button id="tgAddProd" style="align-self:flex-start">+ Add product</button>
         </div>
@@ -1439,6 +1442,8 @@ document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('
 $('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
 
 // ---------- target setting ----------
+// all target values use the ex-factory price; the public price is for reference (used only when no ex-factory price is given)
+const xp=p=>num(p.xf)||num(p.price);
 function tgtDefault(){ return {scope:'all',mode:'total',pmode:'units',total:'',products:[{id:'p1',n:'Product 1',price:'',units:'',w:{g:100,p:0,c:0}}],sameW:true,w:{g:100,p:0,c:0},data:{}}; }
 function T(){ if(!S.tgt) S.tgt=tgtDefault(); return S.tgt; }
 const num=v=>{ const x=parseFloat(String(v).replace(/,/g,'')); return isNaN(x)?0:x; };
@@ -1447,13 +1452,13 @@ const fmtS=v=>v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':fmt0(v
 // Products the target is split into. In "total" mode there is one synthetic product.
 function tgProducts(){
   const t=T();
-  if(t.mode==='total') return [{id:'all',n:'Total target',price:0,units:0,value:num(t.total),w:t.w}];
-  if(t.pmode==='share') return t.products.map(p=>{ const price=num(p.price), value=num(t.total)*num(p.sh)/100; return {id:p.id,n:p.n||'Product',price,units:price?value/price:0,value,sh:num(p.sh),w:t.sameW?t.w:p.w}; });
-  return t.products.map(p=>({id:p.id,n:p.n||'Product',price:num(p.price),units:num(p.units),value:num(p.price)*num(p.units),w:t.sameW?t.w:p.w}));
+  if(t.mode==='total') return [{id:'all',n:'Total target',price:0,pub:0,units:0,value:num(t.total),w:t.w}];
+  if(t.pmode==='share') return t.products.map(p=>{ const price=xp(p), value=num(t.total)*num(p.sh)/100; return {id:p.id,n:p.n||'Product',price,pub:num(p.price),units:price?value/price:0,value,sh:num(p.sh),w:t.sameW?t.w:p.w}; });
+  return t.products.map(p=>({id:p.id,n:p.n||'Product',price:xp(p),pub:num(p.price),units:num(p.units),value:xp(p)*num(p.units),w:t.sameW?t.w:p.w}));
 }
 const tgShare=()=>T().mode==='products'&&T().pmode==='share';
 const tgShareSum=()=>T().products.reduce((a,p)=>a+num(p.sh),0);
-const tgShowUnits=()=>{ const t=T(); return t.mode==='products'&&(t.pmode!=='share'||t.products.some(p=>num(p.price)>0)); };
+const tgShowUnits=()=>{ const t=T(); return t.mode==='products'&&(t.pmode!=='share'||t.products.some(p=>xp(p)>0)); };
 function tgScopeReps(){
   const sc=T().scope; const all=S.people.filter(p=>p.role==='MR');
   if(sc==='all') return all;
@@ -1522,6 +1527,7 @@ function renderTgt(){
   if(!t.pmode) t.pmode='units';
   document.querySelector(`input[name="tgPMode"][value="${t.pmode}"]`).checked=true;
   $('#tgTotalBox').hidden=!(t.mode==='total'||t.pmode==='share'); $('#tgProdBox').hidden=t.mode!=='products';
+  $('#tgProdBox').closest('.tg-card').classList.toggle('tg-wide',t.mode==='products'); $('#tgScope').closest('.tg-card').classList.toggle('tg-wide',t.mode==='products');
   $('#tgTotal').value=t.total; $('#tgTotalLbl').textContent=t.mode==='products'?'Total target for all products (EGP)':'Target value (EGP)';
   renderProdTable();
   $('#tgSameRow').hidden=t.mode!=='products'; $('#tgSame').checked=t.sameW;
@@ -1531,22 +1537,23 @@ function renderProdTable(){
   const t=T(); const sh=t.pmode==='share';
   const rm=i=>`<td><button class="ghost" data-prm="${i}" ${t.products.length<2?'disabled':''} title="Remove product">✕</button></td>`;
   const inp=(f,v,ph,lab)=>`<td><input data-pf="${f}" class="num" inputmode="decimal" value="${esc(v||'')}" placeholder="${ph}" aria-label="${lab}"></td>`;
-  $('#tgProdHead').innerHTML=sh?'<tr><th>Product</th><th>% of target</th><th>Price (optional)</th><th class="r">Units</th><th class="r">Value</th><th></th></tr>'
-                                :'<tr><th>Product</th><th>Price</th><th>Units</th><th class="r">Value</th><th class="r">% of target</th><th></th></tr>';
+  $('#tgProdHead').innerHTML=sh?'<tr><th>Product</th><th>% of target</th><th>Public price</th><th>Ex-factory price</th><th class="r">Units</th><th class="r">Value (ex-factory)</th><th></th></tr>'
+                                :'<tr><th>Product</th><th>Public price</th><th>Ex-factory price</th><th>Units</th><th class="r">Value (ex-factory)</th><th class="r">% of target</th><th></th></tr>';
   $('#tgProdRows').innerHTML=t.products.map((p,i)=>`<tr data-i="${i}"><td><input data-pf="n" value="${esc(p.n)}" aria-label="Product name"></td>${
-    sh?inp('sh',p.sh,'0','Share of total target %')+inp('price',p.price,'0','Price')+'<td class="r num ro" data-pu></td><td class="r num" data-pv></td>'
-      :inp('price',p.price,'0','Price')+inp('units',p.units,'0','Units')+'<td class="r num" data-pv></td><td class="r num ro" data-ps></td>'}${rm(i)}</tr>`).join('');
+    sh?inp('sh',p.sh,'0','Share of total target %')+inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','Ex-factory price')+'<td class="r num ro" data-pu></td><td class="r num" data-pv></td>'
+      :inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','Ex-factory price')+inp('units',p.units,'0','Units')+'<td class="r num" data-pv></td><td class="r num ro" data-ps></td>'}${rm(i)}</tr>`).join('');
   updProdCells();
 }
 function updProdCells(){
   const t=T(); const sh=t.pmode==='share'; const prods=tgProducts(); const tot=prods.reduce((a,p)=>a+p.value,0);
   document.querySelectorAll('#tgProdRows tr').forEach((tr,i)=>{ const p=prods[i]; if(!p) return;
     const v=tr.querySelector('[data-pv]'); if(v) v.textContent=fmt0(p.value);
+    const xi=tr.querySelector('[data-pf="xf"]'); if(xi) xi.classList.toggle('miss',!num(t.products[i].xf)&&num(t.products[i].price)>0);
     const u=tr.querySelector('[data-pu]'); if(u) u.textContent=p.price?fmt0(p.units):'—';
     const s=tr.querySelector('[data-ps]'); if(s) s.textContent=tot?(p.value/tot*100).toFixed(1)+'%':'—'; });
   if(sh){ const ss=tgShareSum(), ok=Math.abs(ss-100)<0.01;
-    $('#tgProdFoot').innerHTML=`<tr><td>Total</td><td class="num ${ok?'ok':'bad'}">${ok?'✓ 100%':(+ss.toFixed(2))+'%'+(ss<100?` · ${+(100-ss).toFixed(2)}% left`:' · too much')}</td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td></td></tr>`; }
-  else $('#tgProdFoot').innerHTML=t.products.length>1?`<tr><td>Total</td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td class="r num">${tot?'100%':''}</td><td></td></tr>`:'';
+    $('#tgProdFoot').innerHTML=`<tr><td>Total</td><td class="num ${ok?'ok':'bad'}">${ok?'✓ 100%':(+ss.toFixed(2))+'%'+(ss<100?` · ${+(100-ss).toFixed(2)}% left`:' · too much')}</td><td></td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td></td></tr>`; }
+  else $('#tgProdFoot').innerHTML=t.products.length>1?`<tr><td>Total</td><td></td><td></td><td></td><td class="r num">${fmt0(tot)}</td><td class="r num">${tot?'100%':''}</td><td></td></tr>`:'';
 }
 function weightRow(key,label,w){
   const s=w.g+w.p+w.c, ok=Math.abs(s-100)<0.01;
@@ -1614,8 +1621,8 @@ function renderTgtResult(){
 $('#tgScope').onchange=e=>{ T().scope=e.target.value; renderTgt(); };
 document.querySelectorAll('input[name="tgMode"]').forEach(r=>r.onchange=e=>{ T().mode=e.target.value; renderTgt(); save(); });
 document.querySelectorAll('input[name="tgPMode"]').forEach(r=>r.onchange=e=>{ const t=T(); t.pmode=e.target.value;
-  if(t.pmode==='share'){ const vals=t.products.map(p=>num(p.price)*num(p.units)); const tot=vals.reduce((a,v)=>a+v,0);
-    if(tot&&!t.products.some(p=>num(p.sh))){ t.products.forEach((p,i)=>p.sh=String(+(vals[i]/tot*100).toFixed(2))); if(!num(t.total)) t.total=String(tot); } }
+  if(t.pmode==='share'){ const vals=t.products.map(p=>xp(p)*num(p.units)); const tot=vals.reduce((a,v)=>a+v,0);
+    if(tot&&!t.products.some(p=>num(p.sh))){ let acc=0; t.products.forEach((p,i)=>{ const last=i===t.products.length-1; const v=last?+(100-acc).toFixed(2):+(vals[i]/tot*100).toFixed(2); acc+=v; p.sh=String(v); }); if(!num(t.total)) t.total=String(tot); } }
   renderTgt(); save(); });
 $('#tgTotal').oninput=e=>{ T().total=e.target.value; if(tgShare()) updProdCells(); renderTgtResult(); save(); };
 $('#tgAddProd').onclick=()=>{ const t=T(); const id='p'+Date.now().toString(36); t.products.push({id,n:`Product ${t.products.length+1}`,price:'',units:'',sh:tgShare()?String(Math.max(0,+(100-tgShareSum()).toFixed(2))):'',w:{...t.w}}); renderTgt(); save(); };
@@ -1732,11 +1739,12 @@ $('#tgDlS').onclick=async()=>{
 
   // ---- Summary
   const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
-  sm.columns=[{width:30},{width:13},{width:13},{width:17},{width:14},{width:14},{width:14}];
+  sm.columns=[{width:30},{width:14},{width:13},{width:19},{width:14},{width:15},{width:14}];
   await titleBlock(sm,wb,img,'Target',`${scopeName} · ${R_.rows.length} reps · yellow cells can be changed`,7); startAt(sm,'A6');
-  ['Product','Price','Units','Target value','% of total target'].forEach((x,i)=>hdr(sm.getCell(5,i+1),x)); sm.getRow(5).height=28;
+  ['Product','Ex-factory price','Units','Target value (ex-factory)','% of total target'].concat(isP?['Public price (reference)']:[]).forEach((x,i)=>hdr(sm.getCell(5,i+1),x)); sm.getRow(5).height=28;
   const PR=i=>6+i; const ST=6+np;
   prods.forEach((p,i)=>{ const r=PR(i); sm.getCell(r,1).value=p.n;
+    if(isP){ const c=sm.getCell(r,6); c.value=p.pub||null; c.numFmt='#,##0.00'; c.border=BORDER; c.font={color:{argb:'FF5B6B64'}}; }
     if(!isP){ sm.getCell(r,4).value=p.value; sm.getCell(r,4).fill=ED; }
     else if(isSh){ sm.getCell(r,2).value=p.price||null; sm.getCell(r,2).fill=ED; sm.getCell(r,5).value=num(p.sh)/100; sm.getCell(r,5).fill=ED;
       sm.getCell(r,4).value={formula:`$D$${ST}*E${r}`}; sm.getCell(r,3).value={formula:`IF(B${r}>0,D${r}/B${r},"")`}; }
@@ -1832,17 +1840,17 @@ $('#tgDl').onclick=async()=>{
   const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder'; const img=await logoId(wb);
   // Summary
   const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
-  const NC=isP?9:8;
-  sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12},{width:14}];
+  const NC=isP?10:8;
+  sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12},{width:14},{width:14}];
   await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,NC);
-  startAt(sm,'A6'); const hr=sm.getRow(5); hr.values=['Product',isSh?'Price (optional)':'Price','Units','Target value','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target']:[]); styleHeader(hr);
+  startAt(sm,'A6'); const hr=sm.getRow(5); hr.values=['Product','Ex-factory price','Units','Target value (ex-factory)','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target','Public price (reference)']:[]); styleHeader(hr);
   const totR=6+np;
   prods.forEach((p,i)=>{ const r=6+i; const row=sm.getRow(r);
     const val=isSh?{formula:`$D$${totR}*I${r}/100`}:isP?{formula:`B${r}*C${r}`}:p.value;
     const un=isSh?{formula:`IF(B${r}>0,D${r}/B${r},"")`}:isP?p.units:null;
-    row.values=[p.n,isP?(p.price||(isSh?null:0)):null,un,val,p.w.g,p.w.p,p.w.c,{formula:`E${r}+F${r}+G${r}`}].concat(isP?[isSh?p.sh:{formula:`IF($D$${totR}=0,0,D${r}/$D$${totR}*100)`}]:[]);
+    row.values=[p.n,isP?(p.price||(isSh?null:0)):null,un,val,p.w.g,p.w.p,p.w.c,{formula:`E${r}+F${r}+G${r}`}].concat(isP?[isSh?p.sh:{formula:`IF($D$${totR}=0,0,D${r}/$D$${totR}*100)`},p.pub||null]:[]);
     row.eachCell({includeEmpty:true},(c,col)=>{ if(col>NC) return; c.border=BORDER; const ed=(isSh&&(col===2||col===9))||(isP&&!isSh&&(col===2||col===3))||(!isP&&col===4)||(col>=5&&col<=7); if(ed) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}}; });
-    row.getCell(4).numFmt='#,##0'; row.getCell(2).numFmt='#,##0.00'; row.getCell(3).numFmt='#,##0'; if(isP) row.getCell(9).numFmt='0.00'; });
+    row.getCell(4).numFmt='#,##0'; row.getCell(2).numFmt='#,##0.00'; row.getCell(3).numFmt='#,##0'; if(isP){ row.getCell(9).numFmt='0.00'; row.getCell(10).numFmt='#,##0.00'; row.getCell(10).font={color:{argb:'FF5B6B64'}}; } });
   if(isSh){ sm.getRow(totR).values=['TOTAL TARGET (type it here)','','',num(t.total),'','','','',{formula:`SUM(I6:I${totR-1})`}]; sm.getCell(totR,4).fill={type:'pattern',pattern:'solid',fgColor:{argb:XC.edit}};
     sm.getCell(totR+1,9).value={formula:`IF(ABS(I${totR}-100)<0.01,"✓ 100%","Must be 100%")`}; sm.getCell(totR+1,9).font={italic:true,color:{argb:'FF5B6B64'}}; }
   else sm.getRow(totR).values=['TOTAL TARGET','','',{formula:`SUM(D6:D${totR-1})`}].concat(isP?['','','','',{formula:`SUM(I6:I${totR-1})`}]:[]);
@@ -2118,7 +2126,7 @@ const HELP={
   build:['Build full structure','Type how many regional managers, district managers and reps you need. “Split equally” only creates empty slots. “Fill by geography” also gives each rep neighbouring bricks with a similar geo share. It is a first draft: always review it.'],
   fill:['Fill level','70 gives each rep whole bricks (simpler, less even). 148 can split big bricks between reps, so shares come out more even.'],
   custom:['Your own geo share','Download the brick sheet, change the yellow % Geo Share column, and upload it. Your numbers then replace the standard IMS geo share on your board only, in this browser.'],
-  pmode:['Set each product by','Price × units: type each product\'s price and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
+  pmode:['Set each product by','All values use the ex-factory price (the public price is kept for reference). Price × units: type each product\'s prices and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
   tscope:['Who gets the target','Split the target across the whole company, or just one regional or district manager\'s team.'],
   factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
   potsame:['Same potentiality for all products','Ticked (the default): you fill one potentiality column and every product uses it, which is usual when your products share the same market. Untick it to give each product its own potentiality, for example when they treat different conditions. Contribution is always per product, because it is each product\'s own sales.'],
@@ -2205,13 +2213,13 @@ function loadTgtDemo(){
   const mk=(spread)=>{ const raw={}; PARENTS.forEach(pp=>{ raw[pp]=brickGeo(pp)*(1-spread+2*spread*rnd()); }); const sum=Object.values(raw).reduce((a,v)=>a+v,0)||1; const out={}; PARENTS.forEach(pp=>out[pp]=(raw[pp]/sum*100).toFixed(2)); return out; };
   S.tgt={scope:'all',mode:'products',total:'',sameW:false,w:{g:100,p:0,c:0},data:{},
     products:[
-      {id:'pd1',n:'Demo product A (tablets)',price:'85',units:'400000',w:{g:50,p:30,c:20}},
-      {id:'pd2',n:'Demo product B (syrup)',price:'60',units:'250000',w:{g:60,p:40,c:0}},
-      {id:'pd3',n:'Demo product C (new launch)',price:'120',units:'80000',w:{g:100,p:0,c:0}}
+      {id:'pd1',n:'Demo product A (tablets)',price:'85',xf:'60',units:'400000',w:{g:50,p:30,c:20}},
+      {id:'pd2',n:'Demo product B (syrup)',price:'60',xf:'42',units:'250000',w:{g:60,p:40,c:0}},
+      {id:'pd3',n:'Demo product C (new launch)',price:'120',xf:'84',units:'80000',w:{g:100,p:0,c:0}}
     ]};
   S.tgt.potSame=true; S.tgt.potV=2; S.tgt.data._all={pot:mk(.45)}; S.tgt.data.pd1={con:mk(.6)};
   renderTgt(); render();
-  toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(85*400000+60*250000+120*80000)} EGP. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
+  toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(60*400000+42*250000+84*80000)} EGP at ex-factory price. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
 }
 $('#tgDemo').onclick=loadTgtDemo;
 
@@ -2236,7 +2244,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['2 Nov 2026',['Rep target cards show units and value only (no % column)','Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
+  ['2 Nov 2026',['Ex-factory price for each product: all target values and units are now calculated on it (public price kept for reference)','Rep target cards show units and value only (no % column)','Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
   ['22 Oct 2026',['Target sheet: units before value for each product, two-row headers, and a new “Rep target cards” sheet with one card per rep','Downloaded sheets open with the cursor below the logo','One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
