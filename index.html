@@ -445,7 +445,7 @@ footer.foot img{width:84px;height:84px;display:block}
               <label class="tg-radio"><input type="radio" name="tgPMode" value="units"> Price × units</label>
               <label class="tg-radio"><input type="radio" name="tgPMode" value="share"> % of total target</label>
             </div></div>
-          <div class="sub" style="margin:0">Values and units use the <b>ex-factory price</b>. The public price is for reference; a product without an ex-factory price uses its public price (orange box).</div>
+          <div class="sub" style="margin:0">Values and units use the <b>X-factor price</b>. The public price is for reference; a product without an X-factor price uses its public price (orange box).</div>
           <div class="tbl-wrap" style="max-height:none"><table class="tg-prod"><thead id="tgProdHead"></thead><tbody id="tgProdRows"></tbody><tfoot id="tgProdFoot"></tfoot></table></div>
           <button id="tgAddProd" style="align-self:flex-start">+ Add product</button>
         </div>
@@ -1442,7 +1442,7 @@ document.querySelectorAll('input[name="bmode"]').forEach(r=>r.addEventListener('
 $('#bGo').onclick=e=>{ if(S.people.length&&armed!=='build'){ confirmBtn(e.target,'build',()=>{},'Build structure'); return; } armed=''; buildStructure(); };
 
 // ---------- target setting ----------
-// all target values use the ex-factory price; the public price is for reference (used only when no ex-factory price is given)
+// all target values use the X-factor price; the public price is for reference (used only when no X-factor price is given)
 const xp=p=>num(p.xf)||num(p.price);
 function tgtDefault(){ return {scope:'all',mode:'total',pmode:'units',total:'',products:[{id:'p1',n:'Product 1',price:'',units:'',w:{g:100,p:0,c:0}}],sameW:true,w:{g:100,p:0,c:0},data:{}}; }
 function T(){ if(!S.tgt) S.tgt=tgtDefault(); return S.tgt; }
@@ -1537,11 +1537,11 @@ function renderProdTable(){
   const t=T(); const sh=t.pmode==='share';
   const rm=i=>`<td><button class="ghost" data-prm="${i}" ${t.products.length<2?'disabled':''} title="Remove product">✕</button></td>`;
   const inp=(f,v,ph,lab)=>`<td><input data-pf="${f}" class="num" inputmode="decimal" value="${esc(v||'')}" placeholder="${ph}" aria-label="${lab}"></td>`;
-  $('#tgProdHead').innerHTML=sh?'<tr><th>Product</th><th>% of target</th><th>Public price</th><th>Ex-factory price</th><th class="r">Units</th><th class="r">Value (ex-factory)</th><th></th></tr>'
-                                :'<tr><th>Product</th><th>Public price</th><th>Ex-factory price</th><th>Units</th><th class="r">Value (ex-factory)</th><th class="r">% of target</th><th></th></tr>';
+  $('#tgProdHead').innerHTML=sh?'<tr><th>Product</th><th>% of target</th><th>Public price</th><th>X-factor price</th><th class="r">Units</th><th class="r">Value (X-factor)</th><th></th></tr>'
+                                :'<tr><th>Product</th><th>Public price</th><th>X-factor price</th><th>Units</th><th class="r">Value (X-factor)</th><th class="r">% of target</th><th></th></tr>';
   $('#tgProdRows').innerHTML=t.products.map((p,i)=>`<tr data-i="${i}"><td><input data-pf="n" value="${esc(p.n)}" aria-label="Product name"></td>${
-    sh?inp('sh',p.sh,'0','Share of total target %')+inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','Ex-factory price')+'<td class="r num ro" data-pu></td><td class="r num" data-pv></td>'
-      :inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','Ex-factory price')+inp('units',p.units,'0','Units')+'<td class="r num" data-pv></td><td class="r num ro" data-ps></td>'}${rm(i)}</tr>`).join('');
+    sh?inp('sh',p.sh,'0','Share of total target %')+inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','X-factor price')+'<td class="r num ro" data-pu></td><td class="r num" data-pv></td>'
+      :inp('price',p.price,'0','Public price')+inp('xf',p.xf,'0','X-factor price')+inp('units',p.units,'0','Units')+'<td class="r num" data-pv></td><td class="r num ro" data-ps></td>'}${rm(i)}</tr>`).join('');
   updProdCells();
 }
 function updProdCells(){
@@ -1741,7 +1741,7 @@ $('#tgDlS').onclick=async()=>{
   const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
   sm.columns=[{width:30},{width:14},{width:13},{width:19},{width:14},{width:15},{width:14}];
   await titleBlock(sm,wb,img,'Target',`${scopeName} · ${R_.rows.length} reps · yellow cells can be changed`,7); startAt(sm,'A6');
-  ['Product','Ex-factory price','Units','Target value (ex-factory)','% of total target'].concat(isP?['Public price (reference)']:[]).forEach((x,i)=>hdr(sm.getCell(5,i+1),x)); sm.getRow(5).height=28;
+  ['Product','X-factor price','Units','Target value (X-factor)','% of total target'].concat(isP?['Public price (reference)']:[]).forEach((x,i)=>hdr(sm.getCell(5,i+1),x)); sm.getRow(5).height=28;
   const PR=i=>6+i; const ST=6+np;
   prods.forEach((p,i)=>{ const r=PR(i); sm.getCell(r,1).value=p.n;
     if(isP){ const c=sm.getCell(r,6); c.value=p.pub||null; c.numFmt='#,##0.00'; c.border=BORDER; c.font={color:{argb:'FF5B6B64'}}; }
@@ -1843,7 +1843,7 @@ $('#tgDl').onclick=async()=>{
   const NC=isP?10:8;
   sm.columns=[{width:26},{width:14},{width:14},{width:18},{width:14},{width:14},{width:14},{width:12},{width:14},{width:14}];
   await titleBlock(sm,wb,img,'Target setting',`${scopeName} · ${reps.length} reps · change the yellow cells and every sheet recalculates`,NC);
-  startAt(sm,'A6'); const hr=sm.getRow(5); hr.values=['Product','Ex-factory price','Units','Target value (ex-factory)','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target','Public price (reference)']:[]); styleHeader(hr);
+  startAt(sm,'A6'); const hr=sm.getRow(5); hr.values=['Product','X-factor price','Units','Target value (X-factor)','Geo share weight %','Potentiality weight %','Contribution weight %','Weights check'].concat(isP?['% of total target','Public price (reference)']:[]); styleHeader(hr);
   const totR=6+np;
   prods.forEach((p,i)=>{ const r=6+i; const row=sm.getRow(r);
     const val=isSh?{formula:`$D$${totR}*I${r}/100`}:isP?{formula:`B${r}*C${r}`}:p.value;
@@ -2126,7 +2126,7 @@ const HELP={
   build:['Build full structure','Type how many regional managers, district managers and reps you need. “Split equally” only creates empty slots. “Fill by geography” also gives each rep neighbouring bricks with a similar geo share. It is a first draft: always review it.'],
   fill:['Fill level','70 gives each rep whole bricks (simpler, less even). 148 can split big bricks between reps, so shares come out more even.'],
   custom:['Your own geo share','Download the brick sheet, change the yellow % Geo Share column, and upload it. Your numbers then replace the standard IMS geo share on your board only, in this browser.'],
-  pmode:['Set each product by','All values use the ex-factory price (the public price is kept for reference). Price × units: type each product\'s prices and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
+  pmode:['Set each product by','All values use the X-factor price (the public price is kept for reference). Price × units: type each product\'s prices and units, and the site works out its value and its % of the total. % of total target: type one total target, then give each product its % of it (all products must add up to 100%). Add a price if you also want units per rep.'],
   tscope:['Who gets the target','Split the target across the whole company, or just one regional or district manager\'s team.'],
   factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
   potsame:['Same potentiality for all products','Ticked (the default): you fill one potentiality column and every product uses it, which is usual when your products share the same market. Untick it to give each product its own potentiality, for example when they treat different conditions. Contribution is always per product, because it is each product\'s own sales.'],
@@ -2219,7 +2219,7 @@ function loadTgtDemo(){
     ]};
   S.tgt.potSame=true; S.tgt.potV=2; S.tgt.data._all={pot:mk(.45)}; S.tgt.data.pd1={con:mk(.6)};
   renderTgt(); render();
-  toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(60*400000+42*250000+84*80000)} EGP at ex-factory price. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
+  toast(`${built?'Demo structure (3 RM · 9 DM · 45 reps) and demo':'Demo'} target loaded: 3 products worth ${fmt0(60*400000+42*250000+84*80000)} EGP at X-factor price. Each product uses different weights. Scroll down to see every rep's target, or download the Excel sheet.`,7000);
 }
 $('#tgDemo').onclick=loadTgtDemo;
 
@@ -2244,7 +2244,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['2 Nov 2026',['Ex-factory price for each product: all target values and units are now calculated on it (public price kept for reference)','Rep target cards show units and value only (no % column)','Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
+  ['2 Nov 2026',['X-factor price for each product: all target values and units are now calculated on it (public price kept for reference)','Rep target cards show units and value only (no % column)','Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
   ['22 Oct 2026',['Target sheet: units before value for each product, two-row headers, and a new “Rep target cards” sheet with one card per rep','Downloaded sheets open with the cursor below the logo','One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
