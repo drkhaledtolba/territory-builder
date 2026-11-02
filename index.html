@@ -1803,21 +1803,21 @@ $('#tgDlS').onclick=async()=>{
 
   // ---- Rep target cards (linked to Targets)
   const cd=wb.addWorksheet('Rep target cards',{views:[{showGridLines:false}]});
-  const CC=isU?4:3; cd.columns=isU?[{width:36},{width:14},{width:17},{width:16}]:[{width:36},{width:17},{width:16}];
+  const CC=isU?3:2; cd.columns=isU?[{width:36},{width:14},{width:18}]:[{width:36},{width:18}];
   await titleBlock(cd,wb,img,'Rep target cards',`${scopeName} · one card per medical rep`,CC); startAt(cd,'A5');
   let r=5; let k=0;
   lines.filter(l=>l.level==='MR').forEach(ln=>{ const TRw=ln.r; const ref=c=>`Targets!${colL(c)}${TRw}`;
     cd.mergeCells(r,1,r,CC); const tt=cd.getCell(r,1); tt.value=ln.name; tt.font={bold:true,size:13,color:{argb:'FFFFFFFF'}}; tt.fill=fill(XC.mr); tt.alignment={vertical:'middle',indent:1}; cd.getRow(r).height=24; r++;
     [ln.dm?'District manager: '+ln.dm:'No district manager',ln.rm?'Regional manager: '+ln.rm:''].filter(Boolean).forEach(x=>{ cd.mergeCells(r,1,r,CC); const m=cd.getCell(r,1); m.value=x; m.font={color:{argb:'FF5B6B64'}}; m.fill=fill(XC.band); m.alignment={indent:1}; r++; });
-    (isU?['Product','Units','Value (EGP)','% of product target']:['Product','Value (EGP)','% of product target']).forEach((x,i)=>{ hdr(cd.getCell(r,i+1),x); if(!i) cd.getCell(r,1).alignment={horizontal:'left',vertical:'middle',indent:1}; }); cd.getRow(r).height=30; r++;
+    (isU?['Product','Units','Value (EGP)']:['Product','Value (EGP)']).forEach((x,i)=>{ hdr(cd.getCell(r,i+1),x); if(!i) cd.getCell(r,1).alignment={horizontal:'left',vertical:'middle',indent:1}; }); cd.getRow(r).height=30; r++;
     const first=r;
-    prods.forEach((p,i)=>{ const c0=P0+i*per, vc=c0+per-1; const v=[p.n]; if(isU) v.push({formula:ref(c0)}); v.push({formula:ref(vc)},{formula:`IF(Summary!$D$${PR(i)}=0,0,${ref(vc)}/Summary!$D$${PR(i)})`});
+    prods.forEach((p,i)=>{ const c0=P0+i*per, vc=c0+per-1; const v=[p.n]; if(isU) v.push({formula:ref(c0)}); v.push({formula:ref(vc)});
       v.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; if(!j) c.alignment={indent:1}; });
-      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; cd.getCell(r,CC).numFmt='0.00%'; r++; });
-    const vc=isU?'C':'B'; const tv=['Total target']; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`},{formula:ref(PC)});
+      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; r++; });
+    const vc=isU?'C':'B'; if(np>1){ const tv=['Total target']; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`});
     tv.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.font={bold:true}; c.fill=fill('FFE3E8E5'); if(!j) c.alignment={indent:1}; });
-    cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,CC).numFmt='0.00%'; r++;
-    if(B.length===1){ cd.mergeCells(r,1,r,CC); const g=cd.getCell(r,1); g.value={formula:`"Balanced weight: "&TEXT(${ref(B0)},"0.00%")&"   ·   % in the total row = share of the whole target"`}; g.font={italic:true,size:9,color:{argb:'FF5B6B64'}}; g.alignment={indent:1}; r++; }
+    cd.getCell(r,isU?3:2).numFmt='#,##0'; r++; }
+    if(B.length===1){ cd.mergeCells(r,1,r,CC); const g=cd.getCell(r,1); g.value={formula:`"Balanced weight: "&TEXT(${ref(B0)},"0.00%")`}; g.font={italic:true,size:9,color:{argb:'FF5B6B64'}}; g.alignment={indent:1}; r++; }
     if(k%3===2) cd.getRow(r-1).addPageBreak(); k++; r++; });
   cd.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};
   wb.views=[{activeTab:1}];
@@ -1924,7 +1924,7 @@ $('#tgDl').onclick=async()=>{
 
   // Rep target cards: one clear card per medical rep, ready to share or print
   const cd=wb.addWorksheet('Rep target cards',{views:[{showGridLines:false}]});
-  const CC=isU?4:3; cd.columns=isU?[{width:36},{width:14},{width:17},{width:16}]:[{width:36},{width:17},{width:16}];
+  const CC=isU?3:2; cd.columns=isU?[{width:36},{width:14},{width:18}]:[{width:36},{width:18}];
   await titleBlock(cd,wb,img,'Rep target cards',`${scopeName} · one card per medical rep · linked to the other sheets`,CC); startAt(cd,'A5');
   const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
   let r=5;
@@ -1932,16 +1932,16 @@ $('#tgDl').onclick=async()=>{
   ordered.forEach((rp,k)=>{ const R=rcR(rp.name); const ref=L=>`'Rep calculation'!${L}${R}`;
     cd.mergeCells(r,1,r,CC); const t=cd.getCell(r,1); t.value=rp.name; t.font={bold:true,size:13,color:{argb:'FFFFFFFF'}}; t.fill=fill(XC.mr); t.alignment={vertical:'middle',indent:1}; cd.getRow(r).height=24; r++;
     [rp.dm?'District manager: '+rp.dm:'No district manager',rp.rm?'Regional manager: '+rp.rm:''].filter(Boolean).forEach(txt=>{ cd.mergeCells(r,1,r,CC); const m=cd.getCell(r,1); m.value=txt; m.font={color:{argb:'FF5B6B64'}}; m.fill=fill(XC.band); m.alignment={indent:1}; r++; });
-    const hd=isU?['Product','Units','Value (EGP)','% of product target']:['Product','Value (EGP)','% of product target'];
+    const hd=isU?['Product','Units','Value (EGP)']:['Product','Value (EGP)'];
     hd.forEach((x,i)=>{ const c=cd.getCell(r,i+1); c.value=x; c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill=fill(XC.head); c.alignment={horizontal:i?'center':'left',vertical:'middle',wrapText:true,indent:i?0:1}; c.border=BORDER; }); cd.getRow(r).height=30; r++;
     const first=r;
-    prods.forEach((p,i)=>{ const v=[p.n]; if(isU) v.push({formula:ref(pc[i].units)}); v.push({formula:ref(pc[i].val)},{formula:ref(pc[i].pct)});
+    prods.forEach((p,i)=>{ const v=[p.n]; if(isU) v.push({formula:ref(pc[i].units)}); v.push({formula:ref(pc[i].val)});
       v.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.alignment=j?{}:{indent:1}; });
-      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; cd.getCell(r,isU?4:3).numFmt='0.00%'; r++; });
+      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; r++; });
     const vc=isU?'C':'B';
-    const tv=[`Total target (% = share of the whole target)`]; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`},{formula:`IF(${GT}=0,0,${vc}${r}/${GT})`});
+    if(np>1){ const tv=['Total target']; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`});
     tv.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.font={bold:true}; c.fill=fill('FFE3E8E5'); c.alignment=j?{}:{indent:1}; });
-    cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?4:3).numFmt='0.00%'; r++;
+    cd.getCell(r,isU?3:2).numFmt='#,##0'; r++; }
     cd.mergeCells(r,1,r,CC); const g=cd.getCell(r,1); g.value={formula:`"Geo share in this scope: "&TEXT(${ref('E')},"0.00%")`}; g.font={italic:true,size:9,color:{argb:'FF5B6B64'}}; g.alignment={indent:1}; r++;
     if(k%3===2) cd.getRow(r-1).addPageBreak(); r+=1; });
   cd.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};
@@ -2236,7 +2236,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
-  ['2 Nov 2026',['Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
+  ['2 Nov 2026',['Rep target cards show units and value only (no % column)','Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
   ['22 Oct 2026',['Target sheet: units before value for each product, two-row headers, and a new “Rep target cards” sheet with one card per rep','Downloaded sheets open with the cursor below the logo','One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
