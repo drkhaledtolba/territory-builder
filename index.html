@@ -277,6 +277,9 @@ tr.grp-rm td{background:var(--sunk);font-weight:700}
 tfoot td{background:var(--sunk);position:sticky;bottom:0}
 .tg-res th.c{text-align:center;border-bottom:1px solid var(--line)}
 .tg-res tr.h2 th{top:29px}
+.tg-res .tg-name{border:1px solid transparent;background:transparent;font:inherit;color:inherit;padding:2px 4px;border-radius:4px;width:100%;min-width:240px}
+.tg-res .tg-name:hover,.tg-res .tg-name:focus{border-color:var(--line);background:var(--panel)}
+.tg-res td.sub{font-size:12px;white-space:nowrap}
 .tg-res th.pg1{background:color-mix(in srgb,var(--sunk) 70%,var(--accent-soft))}
 .tg-res tr:not(.grp-rm):not(.grp-dm) td.pg1{background:color-mix(in srgb,transparent 85%,var(--accent-soft))}
 .tg-res td.ro{color:var(--muted)}
@@ -458,7 +461,7 @@ footer.foot img{width:84px;height:84px;display:block}
         <div class="sub" id="tgDataNote"></div>
         <div class="row" id="tgDataBtns"><button id="tgTpl">Download data template (Excel)</button><button id="tgUp">Upload filled data</button><input type="file" id="tgUpFile" accept=".xlsx" hidden></div>
         <div class="tbl-wrap" id="tgDataWrap" style="max-height:46vh"><table id="tgDataTbl"></table></div></div>
-      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">5</span><h3>Targets</h3><button class="help" data-help="tresult" aria-label="Help">?</button><span class="spacer"></span><button id="tgDl" class="primary">Download target sheet (Excel)</button></div>
+      <div class="tg-card tg-wide"><div class="tg-h"><span class="tg-step">5</span><h3>Targets</h3><button class="help" data-help="tresult" aria-label="Help">?</button><span class="spacer"></span><button id="tgDlS" class="primary" title="Summary, Targets and Rep target cards: the sheet to send to district managers and reps">Target sheet for DMs & reps (Excel)</button><button id="tgDl" title="Everything, including brick data, brick owners and the full rep calculation">Full calculation (Excel)</button></div>
         <div class="banner" id="tgIssues" hidden style="flex-direction:column;align-items:flex-start;gap:2px"></div>
         <div id="tgResult"></div>
         <div class="sub">The Excel sheet keeps every step as formulas: change the target, weights or territory data there and all reps and managers recalculate.</div></div>
@@ -1586,23 +1589,25 @@ function renderTgtResult(){
   const grand=prods.reduce((a,p)=>a+p.value,0);
   $('#tgGrand').textContent=fmt0(grand);
   $('#tgIssues').innerHTML=R_.issues.map(x=>`<div>• ${esc(x)}</div>`).join(''); $('#tgIssues').hidden=!R_.issues.length;
-  $('#tgDl').disabled=!!R_.issues.length;
+  $('#tgDl').disabled=!!R_.issues.length; $('#tgDlS').disabled=!!R_.issues.length;
   if(!R_.rows.length){ box.innerHTML='<div class="empty">Targets appear here once the scope has reps with bricks.</div>'; return; }
   // group: RM > DM > MR
   const byDm=new Map(); R_.rows.forEach(r=>{ const k=r.dm?r.dm.id:'_'; if(!byDm.has(k)) byDm.set(k,[]); byDm.get(k).push(r); });
   const sumRows=list=>{ const o={total:list.reduce((a,r)=>a+r.total,0),p:{}}; prods.forEach(p=>o.p[p.id]={val:list.reduce((a,r)=>a+r.p[p.id].val,0),units:list.reduce((a,r)=>a+r.p[p.id].units,0)}); return o; };
   const per=units?2:1;
-  const head=`<tr><th rowspan="2">Level</th><th rowspan="2">Name</th><th rowspan="2" class="r">Geo share in scope</th>${prods.map((p,i)=>`<th colspan="${per}" class="c pg${i%2}">${esc(p.n)}</th>`).join('')}${multi?'<th rowspan="2" class="r">Total value</th>':''}<th rowspan="2" class="r">% of target</th></tr>
+  const head=`<tr><th rowspan="2">Level</th><th rowspan="2">Name</th><th rowspan="2">Reports to</th><th rowspan="2" class="r">Geo share in scope</th>${prods.map((p,i)=>`<th colspan="${per}" class="c pg${i%2}">${esc(p.n)}</th>`).join('')}${multi?'<th rowspan="2" class="r">Total value</th>':''}<th rowspan="2" class="r">% of target</th></tr>
     <tr class="h2">${prods.map((p,i)=>`${units?`<th class="r pg${i%2}">Units</th>`:''}<th class="r pg${i%2}">Value</th>`).join('')}</tr>`;
   const cells=(o,share)=>`${prods.map((p,i)=>`${units?`<td class="r num ro pg${i%2}">${fmt0(o.p[p.id].units)}</td>`:''}<td class="r num pg${i%2}">${fmt0(o.p[p.id].val)}</td>`).join('')}${multi?`<td class="r num"><b>${fmt0(o.total)}</b></td>`:''}<td class="r num">${grand?f2(o.total/grand*100):'0.00'}%</td>`;
+  const nm=p=>`<input class="tg-name" value="${esc(p.name)}" data-rename="${p.id}" aria-label="Name" title="Click to rename">`;
+  const up=p=>{ const x=p&&P(p.parent); return x?esc(x.name):'—'; };
   let body='';
   const rms=new Map(); [...byDm.keys()].forEach(k=>{ const d=P(k); const r=d&&P(d.parent); const rk=r?r.id:'_'; if(!rms.has(rk)) rms.set(rk,[]); rms.get(rk).push(k); });
   rms.forEach((dmKeys,rk)=>{ const rm=P(rk); const all=dmKeys.flatMap(k=>byDm.get(k));
-    if(rm) body+=`<tr class="grp-rm"><td><span class="role rm">RM</span></td><td>${esc(rm.name)}</td><td class="r num">${f2(all.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(all))}</tr>`;
+    if(rm) body+=`<tr class="grp-rm"><td><span class="role rm">RM</span></td><td>${nm(rm)}</td><td class="sub">—</td><td class="r num">${f2(all.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(all))}</tr>`;
     dmKeys.forEach(k=>{ const d=P(k); const list=byDm.get(k);
-      if(d) body+=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${esc(d.name)}</td><td class="r num">${f2(list.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(list))}</tr>`;
-      list.forEach(r=>body+=`<tr><td><span class="role mr">MR</span></td><td>${esc(r.rep.name)}</td><td class="r num">${f2(r.geoSh*100)}%</td>${cells(r)}</tr>`); }); });
-  body+=`<tr class="grp-rm"><td></td><td><b>Total</b></td><td class="r num">100.00%</td>${cells(sumRows(R_.rows))}</tr>`;
+      if(d) body+=`<tr class="grp-dm"><td><span class="role dm">DM</span></td><td>${nm(d)}</td><td class="sub">${up(d)}</td><td class="r num">${f2(list.reduce((a,r)=>a+r.geoSh,0)*100)}%</td>${cells(sumRows(list))}</tr>`;
+      list.forEach(r=>body+=`<tr><td><span class="role mr">MR</span></td><td>${nm(r.rep)}</td><td class="sub">${up(r.rep)}</td><td class="r num">${f2(r.geoSh*100)}%</td>${cells(r)}</tr>`); }); });
+  body+=`<tr class="grp-rm"><td></td><td><b>Total</b></td><td></td><td class="r num">100.00%</td>${cells(sumRows(R_.rows))}</tr>`;
   box.innerHTML=`<div class="tbl-wrap" style="max-height:60vh"><table class="tg-res">${'<thead>'+head+'</thead><tbody>'+body+'</tbody>'}</table></div>`;
 }
 // events
@@ -1692,6 +1697,132 @@ $('#tgUpFile').onchange=async e=>{
 
 // dynamic target workbook
 const colL=n=>{ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
+// simple target sheet for DMs and reps: Summary, Targets, Rep target cards (no brick-level tabs)
+$('#tgDlS').onclick=async()=>{
+  if(!needXL()) return; const R_=tgCompute(); if(R_.issues.length) return;
+  const t=T(); const prods=R_.prods; const np=prods.length; const isP=t.mode==='products'; const isSh=isP&&t.pmode==='share'; const isU=tgShowUnits();
+  const useG=prods.some(p=>p.w.g>0), useP=prods.some(p=>p.w.p>0), useC=prods.some(p=>p.w.c>0);
+  const same=potSame()||np===1;
+  // territory weight columns (only the parameters in use)
+  const F=[];
+  if(useG) F.push({key:'g',label:'Geo share',get:r=>r.geoSh});
+  if(useP){ if(same){ const p0=prods.find(p=>p.w.p>0); F.push({key:'p',label:'Potentiality',get:r=>r.p[p0.id].ps}); }
+    else prods.filter(p=>p.w.p>0).forEach(p=>F.push({key:'p:'+p.id,label:'Potentiality · '+p.n,get:r=>r.p[p.id].ps})); }
+  if(useC) prods.filter(p=>p.w.c>0).forEach(p=>F.push({key:'c:'+p.id,label:np>1?'Contribution · '+p.n:'Contribution',get:r=>r.p[p.id].cs}));
+  const fkey=(p,f)=>f==='g'?'g':f==='p'?(same?'p':'p:'+p.id):'c:'+p.id;
+  const sameWts=prods.every(p=>p.w.g===prods[0].w.g&&p.w.p===prods[0].w.p&&p.w.c===prods[0].w.c);
+  // balanced weight columns: one shared column when every product is split the same way
+  const sig=p=>JSON.stringify(['g','p','c'].filter(f=>p.w[f]>0).map(f=>[f,sameWts?0:p.id,fkey(p,f)]));
+  const B=[]; const bOf={}; prods.forEach(p=>{ const sg=sig(p); let b=B.find(x=>x.sig===sg); if(!b){ b={sig:sg,p,label:'Balanced weight'}; B.push(b); } bOf[p.id]=b; });
+  if(B.length>1) B.forEach(b=>b.label='Balanced · '+(prods.filter(p=>bOf[p.id]===b).map(p=>p.n).join(', ')));
+  // people in order: RM > DM > MR
+  const used=new Set(); const uname=n=>{ let x=n||'', k=2; while(used.has(x.toLowerCase())) x=`${n} (${k++})`; used.add(x.toLowerCase()); return x; };
+  const byDm=new Map(); R_.rows.forEach(r=>{ const k=r.dm?r.dm.id:'_'; if(!byDm.has(k)) byDm.set(k,[]); byDm.get(k).push(r); });
+  const rms=new Map(); [...byDm.keys()].forEach(k=>{ const d=P(k); const rm=d&&P(d.parent); const rk=rm?rm.id:'_'; if(!rms.has(rk)) rms.set(rk,[]); rms.get(rk).push(k); });
+  const lines=[];
+  rms.forEach((dmKeys,rk)=>{ const rm=P(rk); const rmN=rm?uname(rm.name):'';
+    if(rm) lines.push({level:'RM',name:rmN,parent:''});
+    dmKeys.forEach(k=>{ const d=P(k); const dmN=d?uname(d.name):'';
+      if(d) lines.push({level:'DM',name:dmN,parent:rmN});
+      byDm.get(k).forEach(r=>lines.push({level:'MR',name:uname(r.rep.name),parent:dmN,dm:dmN,rm:rmN,row:r})); }); });
+  const scopeNode=P(t.scope); const scopeName=scopeNode?`${scopeNode.role==='DM'?'District':'Regional'}: ${scopeNode.name}`:'Whole structure';
+  const wb=new ExcelJS.Workbook(); wb.creator='Territory Builder'; const img=await logoId(wb);
+  const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}}); const ED=fill(XC.edit);
+  const hdr=(c,txt,bg)=>{ c.value=txt; c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill=fill(bg||XC.head); c.alignment={vertical:'middle',horizontal:'center',wrapText:true}; c.border=BORDER; };
+
+  // ---- Summary
+  const sm=wb.addWorksheet('Summary',{views:[{showGridLines:false}]});
+  sm.columns=[{width:30},{width:13},{width:13},{width:17},{width:14},{width:14},{width:14}];
+  await titleBlock(sm,wb,img,'Target',`${scopeName} · ${R_.rows.length} reps · yellow cells can be changed`,7); startAt(sm,'A6');
+  ['Product','Price','Units','Target value','% of total target'].forEach((x,i)=>hdr(sm.getCell(5,i+1),x)); sm.getRow(5).height=28;
+  const PR=i=>6+i; const ST=6+np;
+  prods.forEach((p,i)=>{ const r=PR(i); sm.getCell(r,1).value=p.n;
+    if(!isP){ sm.getCell(r,4).value=p.value; sm.getCell(r,4).fill=ED; }
+    else if(isSh){ sm.getCell(r,2).value=p.price||null; sm.getCell(r,2).fill=ED; sm.getCell(r,5).value=num(p.sh)/100; sm.getCell(r,5).fill=ED;
+      sm.getCell(r,4).value={formula:`$D$${ST}*E${r}`}; sm.getCell(r,3).value={formula:`IF(B${r}>0,D${r}/B${r},"")`}; }
+    else { sm.getCell(r,2).value=p.price; sm.getCell(r,3).value=p.units; sm.getCell(r,2).fill=ED; sm.getCell(r,3).fill=ED; sm.getCell(r,4).value={formula:`B${r}*C${r}`}; }
+    if(!isSh) sm.getCell(r,5).value={formula:`IF($D$${ST}=0,0,D${r}/$D$${ST})`};
+    for(let c=1;c<=5;c++){ const x=sm.getCell(r,c); x.border=BORDER; x.numFmt=c===2?'#,##0.00':c===5?'0.00%':'#,##0'; } });
+  sm.getCell(ST,1).value=isSh?'TOTAL TARGET (type it here)':'TOTAL TARGET';
+  sm.getCell(ST,4).value=isSh?num(t.total):{formula:`SUM(D6:D${ST-1})`}; if(isSh) sm.getCell(ST,4).fill=ED;
+  sm.getCell(ST,5).value={formula:`SUM(E6:E${ST-1})`};
+  for(let c=1;c<=5;c++){ const x=sm.getCell(ST,c); x.border=BORDER; x.font={bold:true}; if(!(isSh&&c===4)) x.fill=fill('FFE3E8E5'); x.numFmt=c===5?'0.00%':'#,##0'; }
+  // parameters table: only the factors used
+  const WR=ST+3; sm.getCell(WR-1,1).value='Distribution parameters (weight %)'; sm.getCell(WR-1,1).font={bold:true,color:{argb:XC.mr}};
+  const wcols=sameWts?[{n:'Weight %',ps:prods}]:prods.map(p=>({n:p.n,ps:[p]}));
+  hdr(sm.getCell(WR,1),'Parameter'); wcols.forEach((w,j)=>hdr(sm.getCell(WR,2+j),w.n)); sm.getRow(WR).height=28;
+  const facts=[['g','Geo share',useG],['p','Potentiality',useP],['c','Contribution',useC]].filter(x=>x[2]);
+  const WROW={}; facts.forEach(([f,lab],k)=>{ const r=WR+1+k; WROW[f]=r; sm.getCell(r,1).value=lab; sm.getCell(r,1).border=BORDER;
+    wcols.forEach((w,j)=>{ const c=sm.getCell(r,2+j); c.value=w.ps[0].w[f]; c.fill=ED; c.border=BORDER; c.numFmt='0'; }); });
+  const WT=WR+1+facts.length; sm.getCell(WT,1).value='Total (must be 100)'; sm.getCell(WT,1).font={bold:true}; sm.getCell(WT,1).border=BORDER;
+  wcols.forEach((w,j)=>{ const L=colL(2+j); const c=sm.getCell(WT,2+j); c.value={formula:`SUM(${L}${WR+1}:${L}${WT-1})`}; c.font={bold:true}; c.border=BORDER; });
+  const W=(p,f)=>`Summary!$${colL(2+(sameWts?0:prods.indexOf(p)))}$${WROW[f]}`;
+  const notes=['How the target is split',
+    'Each rep has a weight for every parameter in use (Targets sheet, yellow cells). Each column is rescaled so all reps together make 100%.',
+    'Balanced weight = the parameter weights above applied to the rep\'s weights. Rep target = product target × balanced weight.',
+    'Manager rows add up their reps. Change any yellow cell and every number recalculates.'];
+  notes.forEach((x,i)=>{ const r=WT+2+i; sm.mergeCells(r,1,r,7); const c=sm.getCell(r,1); c.value=x; c.alignment={wrapText:true,vertical:'top'}; c.font=i?{color:{argb:'FF5B6B64'}}:{bold:true}; if(i) sm.getRow(r).height=28; });
+
+  // ---- Targets
+  const tg=wb.addWorksheet('Targets',{views:[{state:'frozen',ySplit:6,xSplit:2,showGridLines:false}]});
+  const F0=4, B0=F0+F.length, P0=B0+B.length, per=isU?2:1, TC=P0+np*per, PC=TC+1;
+  const cols=[{width:8},{width:32},{width:24}]; F.forEach(()=>cols.push({width:13})); B.forEach(()=>cols.push({width:13})); prods.forEach(()=>{ if(isU) cols.push({width:12}); cols.push({width:15}); }); cols.push({width:16},{width:11}); tg.columns=cols;
+  await titleBlock(tg,wb,img,'Targets',`${scopeName} · total target ${fmt0(prods.reduce((a,p)=>a+p.value,0))} EGP`,PC);
+  const D0=7, DE=D0+lines.length-1, TR=DE+1;
+  [['Level',1],['Name',2],['Reports to',3]].forEach(([x,c])=>{ hdr(tg.getCell(5,c),x); hdr(tg.getCell(6,c),''); tg.mergeCells(5,c,6,c); });
+  if(F.length){ hdr(tg.getCell(5,F0),'Territory weight (editable)','FF8A6A12'); for(let c=F0+1;c<B0;c++) hdr(tg.getCell(5,c),'','FF8A6A12'); if(F.length>1) tg.mergeCells(5,F0,5,B0-1); F.forEach((f,k)=>hdr(tg.getCell(6,F0+k),f.label,'FF8A6A12')); }
+  B.forEach((b,k)=>{ hdr(tg.getCell(5,B0+k),k?'':'Balanced','FF0F6B5C'); hdr(tg.getCell(6,B0+k),b.label,'FF0F6B5C'); }); if(B.length>1) tg.mergeCells(5,B0,5,P0-1);
+  prods.forEach((p,i)=>{ const c0=P0+i*per; const bg=i%2?'FF2E4A40':XC.head; hdr(tg.getCell(5,c0),p.n,bg); if(per>1){ hdr(tg.getCell(5,c0+1),'',bg); tg.mergeCells(5,c0,5,c0+1); hdr(tg.getCell(6,c0),'Units',bg); hdr(tg.getCell(6,c0+1),'Value',bg); } else hdr(tg.getCell(6,c0),'Value',bg); });
+  hdr(tg.getCell(5,TC),'Total','FF0F6B5C'); hdr(tg.getCell(5,PC),'','FF0F6B5C'); tg.mergeCells(5,TC,5,PC); hdr(tg.getCell(6,TC),'Value','FF0F6B5C'); hdr(tg.getCell(6,PC),'% of target','FF0F6B5C');
+  tg.getRow(5).height=26; tg.getRow(6).height=30; startAt(tg,'C7');
+  const fcol=k=>colL(F0+F.findIndex(f=>f.key===k));
+  const pctTot=r=>({formula:`IF($${colL(TC)}$${TR}=0,0,${colL(TC)}${r}/$${colL(TC)}$${TR})`});
+  lines.forEach((ln,k)=>{ const r=D0+k; const row=tg.getRow(r); row.getCell(1).value=ln.level; row.getCell(2).value=ln.name; row.getCell(3).value=ln.parent;
+    if(ln.level==='MR'){
+      F.forEach((f,j)=>{ const c=row.getCell(F0+j); c.value=+f.get(ln.row).toFixed(8); c.fill=ED; });
+      B.forEach((b,j)=>{ const p=b.p; const terms=['g','p','c'].filter(f=>p.w[f]>0).map(f=>{ const L=fcol(fkey(p,f)); return `${W(p,f)}*IF($${L}$${TR}=0,0,${L}${r}/$${L}$${TR})`; });
+        row.getCell(B0+j).value={formula:`(${terms.join('+')||'0'})/100`}; });
+      prods.forEach((p,i)=>{ const c0=P0+i*per, vc=c0+per-1; const bL=colL(B0+B.indexOf(bOf[p.id]));
+        row.getCell(vc).value={formula:`Summary!$D$${PR(i)}*${bL}${r}`};
+        if(isU) row.getCell(c0).value={formula:`IF(N(Summary!$B$${PR(i)})>0,${colL(vc)}${r}/Summary!$B$${PR(i)},0)`}; });
+      row.getCell(TC).value={formula:prods.map((p,i)=>colL(P0+i*per+per-1)+r).join('+')};
+    } else {
+      for(let c=F0;c<=TC;c++){ const L=colL(c); row.getCell(c).value={formula:`SUMIF($C$${D0}:$C$${DE},$B${r},${L}$${D0}:${L}$${DE})`}; }
+    }
+    row.getCell(PC).value=pctTot(r);
+    for(let c=1;c<=PC;c++){ const x=row.getCell(c); x.border=BORDER; if(c>=F0&&c<P0||c===PC) x.numFmt='0.00%'; else if(c>=P0) x.numFmt='#,##0'; if(c>=P0&&c<TC&&isU&&(c-P0)%2===0) x.font={color:{argb:'FF5B6B64'}}; if(c===TC) x.font={bold:true}; }
+    if(ln.level==='RM'){ for(let c=1;c<=PC;c++) row.getCell(c).fill=fill(XC.rmBg); row.font={bold:true,color:{argb:XC.rm}}; }
+    if(ln.level==='DM'){ for(let c=1;c<=PC;c++) row.getCell(c).fill=fill(XC.dmBg); row.font={bold:true,color:{argb:XC.dm}}; }
+    if(ln.level==='MR'){ row.getCell(1).font={bold:true,color:{argb:XC.mr}}; row.getCell(2).alignment={indent:1}; }
+    ln.r=r; });
+  { const row=tg.getRow(TR); row.getCell(2).value='TOTAL';
+    for(let c=F0;c<=TC;c++){ const L=colL(c); row.getCell(c).value={formula:`SUMIF($A$${D0}:$A$${DE},"MR",${L}$${D0}:${L}$${DE})`}; }
+    row.getCell(PC).value={formula:`IF(${colL(TC)}${TR}=0,0,1)`};
+    for(let c=1;c<=PC;c++){ const x=row.getCell(c); x.border=BORDER; x.font={bold:true}; x.fill=fill('FFE3E8E5'); if(c>=F0&&c<P0||c===PC) x.numFmt='0.00%'; else if(c>=P0) x.numFmt='#,##0'; } }
+  tg.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'5:6'};
+
+  // ---- Rep target cards (linked to Targets)
+  const cd=wb.addWorksheet('Rep target cards',{views:[{showGridLines:false}]});
+  const CC=isU?4:3; cd.columns=isU?[{width:36},{width:14},{width:17},{width:16}]:[{width:36},{width:17},{width:16}];
+  await titleBlock(cd,wb,img,'Rep target cards',`${scopeName} · one card per medical rep`,CC); startAt(cd,'A5');
+  let r=5; let k=0;
+  lines.filter(l=>l.level==='MR').forEach(ln=>{ const TRw=ln.r; const ref=c=>`Targets!${colL(c)}${TRw}`;
+    cd.mergeCells(r,1,r,CC); const tt=cd.getCell(r,1); tt.value=ln.name; tt.font={bold:true,size:13,color:{argb:'FFFFFFFF'}}; tt.fill=fill(XC.mr); tt.alignment={vertical:'middle',indent:1}; cd.getRow(r).height=24; r++;
+    [ln.dm?'District manager: '+ln.dm:'No district manager',ln.rm?'Regional manager: '+ln.rm:''].filter(Boolean).forEach(x=>{ cd.mergeCells(r,1,r,CC); const m=cd.getCell(r,1); m.value=x; m.font={color:{argb:'FF5B6B64'}}; m.fill=fill(XC.band); m.alignment={indent:1}; r++; });
+    (isU?['Product','Units','Value (EGP)','% of product target']:['Product','Value (EGP)','% of product target']).forEach((x,i)=>{ hdr(cd.getCell(r,i+1),x); if(!i) cd.getCell(r,1).alignment={horizontal:'left',vertical:'middle',indent:1}; }); cd.getRow(r).height=30; r++;
+    const first=r;
+    prods.forEach((p,i)=>{ const c0=P0+i*per, vc=c0+per-1; const v=[p.n]; if(isU) v.push({formula:ref(c0)}); v.push({formula:ref(vc)},{formula:`IF(Summary!$D$${PR(i)}=0,0,${ref(vc)}/Summary!$D$${PR(i)})`});
+      v.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; if(!j) c.alignment={indent:1}; });
+      if(isU) cd.getCell(r,2).numFmt='#,##0'; cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,isU?3:2).font={bold:true}; cd.getCell(r,CC).numFmt='0.00%'; r++; });
+    const vc=isU?'C':'B'; const tv=['Total target']; if(isU) tv.push(''); tv.push({formula:`SUM(${vc}${first}:${vc}${r-1})`},{formula:ref(PC)});
+    tv.forEach((x,j)=>{ const c=cd.getCell(r,j+1); c.value=x; c.border=BORDER; c.font={bold:true}; c.fill=fill('FFE3E8E5'); if(!j) c.alignment={indent:1}; });
+    cd.getCell(r,isU?3:2).numFmt='#,##0'; cd.getCell(r,CC).numFmt='0.00%'; r++;
+    if(B.length===1){ cd.mergeCells(r,1,r,CC); const g=cd.getCell(r,1); g.value={formula:`"Balanced weight: "&TEXT(${ref(B0)},"0.00%")&"   ·   % in the total row = share of the whole target"`}; g.font={italic:true,size:9,color:{argb:'FF5B6B64'}}; g.alignment={indent:1}; r++; }
+    if(k%3===2) cd.getRow(r-1).addPageBreak(); k++; r++; });
+  cd.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0};
+  wb.views=[{activeTab:1}];
+  const buf=await wb.xlsx.writeBuffer(); download(new Blob([buf]),`Targets_${scopeName.replace(/[^A-Za-z0-9]+/g,'_')}_${today()}.xlsx`); toast('Target sheet for DMs and reps downloaded.'); sendCopy('Target sheet');
+};
 $('#tgDl').onclick=async()=>{
   if(!needXL()) return; const R_=tgCompute(); if(R_.issues.length) return;
   const t=T(); const prods=R_.prods; const np=prods.length; const isP=t.mode==='products'; const isSh=isP&&t.pmode==='share'; const isU=tgShowUnits();
@@ -1992,7 +2123,8 @@ const HELP={
   factors:['Distribution factors','Geo share = the territory\'s market size. Potentiality = how similar products sell there. Contribution = how your own product sold there. The weights say how much each factor counts and must add up to 100%. Use 100% geo share if you have no other data.'],
   potsame:['Same potentiality for all products','Ticked (the default): you fill one potentiality column and every product uses it, which is usual when your products share the same market. Untick it to give each product its own potentiality, for example when they treat different conditions. Contribution is always per product, because it is each product\'s own sales.'],
   tdata:['Territory data','For potentiality and contribution, fill in each 70 brick\'s % or, if your data comes per rep, each medical rep\'s % (choose “Enter data by”). Download the template, fill it in Excel and upload it, or type here. Empty cells count as 0.'],
-  tresult:['Targets','Each rep gets: target × weighted share of his bricks. District and regional managers get the sum of their reps. The Excel sheet keeps all of this as live formulas.'],
+  tresult:['Targets','Click any name to rename it. “Target sheet for DMs & reps” gives a clean file with Summary, Targets and one card per rep; you can edit the territory weights and parameter weights there. “Full calculation” adds the brick-level working tabs for you to check the numbers.'],
+  tresult_old:['Targets','Each rep gets: target × weighted share of his bricks. District and regional managers get the sum of their reps. The Excel sheet keeps all of this as live formulas.'],
   save:['Saving and sharing','Your board saves itself in this browser. To keep it safe or move it to another device, download the file. A share link lets anyone open a copy of your structure without changing yours.']
 };
 function showHelp(b){
@@ -2104,6 +2236,7 @@ $('#fbGo').onclick=async()=>{
 // ---------- what's new ----------
 const NEWS_V='2026-10-08';
 const NEWS=[
+  ['2 Nov 2026',['Simple target sheet for DMs & reps: Summary, Targets with editable territory weights and balanced weight, and rep cards','Rename DMs and reps directly in the target table, which now shows who each person reports to']],
   ['22 Oct 2026',['Target sheet: units before value for each product, two-row headers, and a new “Rep target cards” sheet with one card per rep','Downloaded sheets open with the cursor below the logo','One potentiality for all products by default, with an option to use a different one per product']],
   ['21 Oct 2026',['Potentiality and contribution can be entered per medical rep instead of per 70 brick','Target by products: set each product as a % of the total target (all products add up to 100%), or by price × units as before, which now also shows each product\'s %']],
   ['8 Oct 2026',['Quick tour and a demo structure for first-time users','Demo target in the Target setting tab: 3 products, different weights and sample territory data','Undo and redo (Ctrl+Z / Ctrl+Y), New board, and a “Saved” indicator','Help (?) buttons next to the main controls','Tap ⋮⋮ to move reps and managers, so the site works on phones','Search also shows bricks that are already assigned, and to whom','Sending a copy of your structure is now off unless you tick it','Feedback form']],
